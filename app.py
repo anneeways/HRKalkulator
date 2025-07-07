@@ -5,6 +5,30 @@ import json
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
+import io
+
+# Optional imports for exports - gracefully handle if not available
+try:
+    from pptx import Presentation
+    from pptx.util import Inches, Pt
+    from pptx.enum.text import PP_ALIGN
+    from pptx.dml.color import RGBColor
+    PPTX_AVAILABLE = True
+except ImportError:
+    PPTX_AVAILABLE = False
+
+try:
+    from reportlab.lib.pagesizes import A4, letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics.charts.barcharts import VerticalBarChart
+    from reportlab.graphics.charts.piecharts import Pie
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
 # Configure Streamlit page
 st.set_page_config(
@@ -298,6 +322,244 @@ def calculate_development_roi(params):
         }
     }
 
+def create_pdf_report(initiative_results, overall_roi, total_investment, total_benefits, params_data):
+    """Create a comprehensive PDF report"""
+    if not REPORTLAB_AVAILABLE:
+        return None
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch)
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        spaceAfter=30,
+        textColor=colors.darkblue
+    )
+    story.append(Paragraph("HR ROI Calculator - Comprehensive Report", title_style))
+    story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal']))
+    story.append(Spacer(1, 20))
+    
+    # Executive Summary
+    story.append(Paragraph("Executive Summary", styles['Heading2']))
+    
+    summary_data = [
+        ['Metric', 'Value', 'Status'],
+        ['Portfolio ROI', f"{overall_roi:.0f}%", get_roi_status(overall_roi)],
+        ['Total Investment', format_currency(total_investment), ''],
+        ['Total Annual Benefits', format_currency(total_benefits), ''],
+        ['Net Annual Benefit', format_currency(total_benefits - total_investment), '']
+    ]
+    
+    summary_table = Table(summary_data, colWidths=[2*inch, 1.5*inch, 2*inch])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    story.append(summary_table)
+    story.append(Spacer(1, 20))
+    
+    # Initiative Details
+    story.append(Paragraph("Initiative Breakdown", styles['Heading2']))
+    
+    for i, initiative in enumerate(initiative_results):
+        story.append(Paragraph(f"{i+1}. {initiative['Initiative']}", styles['Heading3']))
+        
+        init_data = [
+            ['Investment', format_currency(initiative['Investment'])],
+            ['Annual Benefits', format_currency(initiative['Annual Benefits'])],
+            ['ROI', f"{initiative['ROI (%)']:.0f}%"],
+            ['Status', get_roi_status(initiative['ROI (%)'])]
+        ]
+        
+        init_table = Table(init_data, colWidths=[2*inch, 2*inch])
+        init_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        story.append(init_table)
+        story.append(Spacer(1, 12))
+    
+    # Recommendations
+    story.append(Paragraph("Strategic Recommendations", styles['Heading2']))
+    
+    if overall_roi >= 200:
+        recommendation = "✅ Strong portfolio performance. Proceed with full implementation across all initiatives. Focus on scaling successful programs and monitoring key metrics."
+    elif overall_roi >= 100:
+        recommendation = "⚠️ Moderate portfolio performance. Prioritize highest ROI initiatives for immediate implementation. Review and optimize lower-performing programs."
+    else:
+        recommendation = "❌ Portfolio requires optimization. Focus resources on highest ROI initiatives only. Reassess assumptions and implementation strategies for underperforming programs."
+    
+    story.append(Paragraph(recommendation, styles['Normal']))
+    story.append(Spacer(1, 20))
+    
+    # Implementation Priority
+    story.append(Paragraph("Implementation Priority Matrix", styles['Heading3']))
+    sorted_initiatives = sorted(initiative_results, key=lambda x: x['ROI (%)'], reverse=True)
+    
+    priority_data = [['Priority', 'Initiative', 'ROI', 'Recommendation']]
+    for i, init in enumerate(sorted_initiatives):
+        if init['ROI (%)'] >= 200:
+            priority = "Phase 1 (Immediate)"
+        elif init['ROI (%)'] >= 100:
+            priority = "Phase 2 (3-6 months)"
+        else:
+            priority = "Phase 3 (Review)"
+        
+        priority_data.append([
+            priority,
+            init['Initiative'],
+            f"{init['ROI (%)']:.0f}%",
+            "Implement" if init['ROI (%)'] >= 100 else "Optimize"
+        ])
+    
+    priority_table = Table(priority_data, colWidths=[1.5*inch, 2.5*inch, 1*inch, 1*inch])
+    priority_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.lightblue),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    story.append(priority_table)
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+def create_powerpoint_presentation(initiative_results, overall_roi, total_investment, total_benefits):
+    """Create a PowerPoint presentation"""
+    if not PPTX_AVAILABLE:
+        return None
+    
+    prs = Presentation()
+    
+    # Slide 1: Title Slide
+    slide_layout = prs.slide_layouts[0]  # Title slide layout
+    slide = prs.slides.add_slide(slide_layout)
+    title = slide.shapes.title
+    subtitle = slide.placeholders[1]
+    
+    title.text = "HR ROI Calculator Results"
+    subtitle.text = f"Portfolio Analysis\nGenerated: {datetime.now().strftime('%B %d, %Y')}"
+    
+    # Slide 2: Executive Summary
+    slide_layout = prs.slide_layouts[1]  # Title and content layout
+    slide = prs.slides.add_slide(slide_layout)
+    title = slide.shapes.title
+    content = slide.placeholders[1]
+    
+    title.text = "Executive Summary"
+    
+    summary_text = f"""Portfolio Performance Overview:
+
+• Total ROI: {overall_roi:.0f}%
+• Total Investment: {format_currency(total_investment)}
+• Total Annual Benefits: {format_currency(total_benefits)}
+• Net Annual Benefit: {format_currency(total_benefits - total_investment)}
+
+Status: {get_roi_status(overall_roi)}
+"""
+    
+    content.text = summary_text
+    
+    # Slide 3: Initiative Comparison
+    slide_layout = prs.slide_layouts[1]
+    slide = prs.slides.add_slide(slide_layout)
+    title = slide.shapes.title
+    content = slide.placeholders[1]
+    
+    title.text = "Initiative Performance Comparison"
+    
+    # Sort initiatives by ROI
+    sorted_initiatives = sorted(initiative_results, key=lambda x: x['ROI (%)'], reverse=True)
+    
+    comparison_text = "Initiative Rankings:\n\n"
+    for i, init in enumerate(sorted_initiatives):
+        status_emoji = "🟢" if init['ROI (%)'] >= 200 else "🟡" if init['ROI (%)'] >= 100 else "🔴"
+        comparison_text += f"{i+1}. {init['Initiative']}\n"
+        comparison_text += f"   ROI: {init['ROI (%)']:.0f}% {status_emoji}\n"
+        comparison_text += f"   Investment: {format_currency(init['Investment'])}\n\n"
+    
+    content.text = comparison_text
+    
+    # Slide 4: Implementation Roadmap
+    slide_layout = prs.slide_layouts[1]
+    slide = prs.slides.add_slide(slide_layout)
+    title = slide.shapes.title
+    content = slide.placeholders[1]
+    
+    title.text = "Implementation Roadmap"
+    
+    roadmap_text = """Phase 1 (Immediate - 0-3 months):
+• Launch initiatives with ROI ≥ 200%
+• Secure executive sponsorship
+• Establish measurement frameworks
+
+Phase 2 (Short-term - 3-6 months):
+• Implement initiatives with ROI 100-199%
+• Monitor Phase 1 results
+• Adjust programs based on early feedback
+
+Phase 3 (Long-term - 6+ months):
+• Review and optimize underperforming initiatives
+• Scale successful programs
+• Develop next generation of HR initiatives"""
+    
+    content.text = roadmap_text
+    
+    # Slide 5: Key Success Factors
+    slide_layout = prs.slide_layouts[1]
+    slide = prs.slides.add_slide(slide_layout)
+    title = slide.shapes.title
+    content = slide.placeholders[1]
+    
+    title.text = "Key Success Factors"
+    
+    success_text = """Critical Elements for Success:
+
+• Executive Leadership Support
+  - Visible commitment from senior leadership
+  - Adequate resource allocation
+
+• Robust Measurement & Analytics
+  - Clear KPIs and success metrics
+  - Regular progress monitoring
+
+• Change Management
+  - Comprehensive communication strategy
+  - Employee engagement and buy-in
+
+• Continuous Improvement
+  - Regular program evaluation
+  - Agile adjustment of strategies"""
+    
+    content.text = success_text
+    
+    # Save to buffer
+    buffer = io.BytesIO()
+    prs.save(buffer)
+    buffer.seek(0)
+    return buffer
+
 def main():
     # Header
     st.markdown("""
@@ -309,6 +571,35 @@ def main():
         </p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Show export capabilities
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if REPORTLAB_AVAILABLE:
+            st.success("✅ PDF Export Available")
+        else:
+            st.warning("⚠️ PDF Export: Install reportlab")
+    
+    with col2:
+        if PPTX_AVAILABLE:
+            st.success("✅ PowerPoint Export Available")
+        else:
+            st.warning("⚠️ PowerPoint: Install python-pptx")
+    
+    with col3:
+        st.success("✅ Text & JSON Export Available")
+    
+    # Installation instructions if needed
+    if not REPORTLAB_AVAILABLE or not PPTX_AVAILABLE:
+        with st.expander("📦 Enable Additional Export Options"):
+            st.write("To enable all export formats, install the following packages:")
+            if not REPORTLAB_AVAILABLE:
+                st.code("pip install reportlab", language="bash")
+                st.write("• **reportlab**: Enables PDF report generation with tables and charts")
+            if not PPTX_AVAILABLE:
+                st.code("pip install python-pptx", language="bash") 
+                st.write("• **python-pptx**: Enables PowerPoint presentation generation")
+            st.info("After installation, restart your Streamlit application to enable these features.")
     
     # Initialize session state
     if 'selected_initiatives' not in st.session_state:
@@ -631,6 +922,43 @@ def display_initiative(initiative_key):
             showlegend=False
         )
         st.plotly_chart(fig, use_container_width=True)
+    
+    # Quick export for individual initiative
+    st.divider()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(f"📋 Export {template['name']} Summary", key=f"export_text_{initiative_key}"):
+            individual_report = f"""
+{template['name']} - ROI Analysis
+Generated: {datetime.now().strftime('%B %d, %Y')}
+
+RESULTS SUMMARY
+===============
+ROI: {results['roi']:.0f}%
+Investment: {format_currency(results.get('total_investment', results.get('total_costs', 0)))}
+Annual Benefits: {format_currency(results.get('annual_benefits', results.get('annual_savings', 0)))}
+Status: {get_roi_status(results['roi'])}
+
+PARAMETERS USED
+===============
+"""
+            for key, value in params.items():
+                if isinstance(value, (int, float)):
+                    individual_report += f"{key.replace('_', ' ').title()}: {value:,}\n"
+                else:
+                    individual_report += f"{key.replace('_', ' ').title()}: {value}\n"
+            
+            st.download_button(
+                label="📥 Download Summary",
+                data=individual_report,
+                file_name=f"{initiative_key}_roi_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                mime="text/plain",
+                key=f"download_{initiative_key}"
+            )
+    
+    with col2:
+        st.info(f"💡 **Typical ROI Range:** {template['typical_roi']}")
 
 def display_overall_summary():
     """Display summary across all selected initiatives"""
@@ -715,20 +1043,50 @@ def display_overall_summary():
     
     # Export functionality
     st.divider()
-    col1, col2 = st.columns(2)
+    st.subheader("📄 Export Options")
+    
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("📋 Export Summary Report", type="primary"):
+        if st.button("📋 Text Report", type="primary"):
             report = create_summary_report(initiative_results, overall_roi, total_investment, total_benefits)
             st.download_button(
-                label="📥 Download Report",
+                label="📥 Download Text Report",
                 data=report,
                 file_name=f"hr_roi_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                 mime="text/plain"
             )
     
     with col2:
-        if st.button("📊 Export Data (JSON)", type="secondary"):
+        if REPORTLAB_AVAILABLE:
+            if st.button("📄 PDF Report", type="primary"):
+                pdf_buffer = create_pdf_report(initiative_results, overall_roi, total_investment, total_benefits, st.session_state.params)
+                if pdf_buffer:
+                    st.download_button(
+                        label="📥 Download PDF",
+                        data=pdf_buffer,
+                        file_name=f"hr_roi_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf"
+                    )
+        else:
+            st.button("📄 PDF Report", disabled=True, help="Install reportlab to enable PDF export")
+    
+    with col3:
+        if PPTX_AVAILABLE:
+            if st.button("📊 PowerPoint", type="primary"):
+                ppt_buffer = create_powerpoint_presentation(initiative_results, overall_roi, total_investment, total_benefits)
+                if ppt_buffer:
+                    st.download_button(
+                        label="📥 Download PowerPoint",
+                        data=ppt_buffer,
+                        file_name=f"hr_roi_presentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pptx",
+                        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    )
+        else:
+            st.button("📊 PowerPoint", disabled=True, help="Install python-pptx to enable PowerPoint export")
+    
+    with col4:
+        if st.button("📊 JSON Data", type="secondary"):
             export_data = {
                 'initiatives': initiative_results,
                 'summary': {
@@ -736,6 +1094,7 @@ def display_overall_summary():
                     'total_benefits': total_benefits,
                     'overall_roi': overall_roi
                 },
+                'parameters': st.session_state.params,
                 'timestamp': datetime.now().isoformat()
             }
             st.download_button(
