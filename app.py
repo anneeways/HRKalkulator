@@ -62,7 +62,7 @@ st.markdown("""
 INITIATIVE_TEMPLATES = {
     'leadership_development': {
         'name': "Leadership Development Program",
-        'description': "Comprehensive leadership training with coaching and assessments",
+        'description': "Comprehensive leadership training with coaching and assessments - improves productivity, retention, team performance, and reduces sick leave",
         'participants': 25,
         'program_duration': 6,
         'avg_salary': 100000,
@@ -73,11 +73,12 @@ INITIATIVE_TEMPLATES = {
         'productivity_gain': 18,
         'retention_improvement': 30,
         'team_performance_gain': 15,
-        'typical_roi': "400-800%"  # Updated to reflect incremental-only calculation
+        'sick_leave_reduction': 20,  # NEW: typical reduction in sick days
+        'typical_roi': "500-1000%"  # Updated to reflect sick leave benefits
     },
     'executive_coaching': {
         'name': "Executive Coaching Initiative", 
-        'description': "1-on-1 coaching for senior leaders",
+        'description': "1-on-1 coaching for senior leaders - reduces stress, improves decision-making, and creates healthier work environments",
         'participants': 10,
         'program_duration': 12,
         'avg_salary': 150000,
@@ -88,7 +89,8 @@ INITIATIVE_TEMPLATES = {
         'productivity_gain': 25,
         'retention_improvement': 40,
         'team_performance_gain': 20,
-        'typical_roi': "500-1000%"  # Updated to reflect incremental-only calculation
+        'sick_leave_reduction': 25,  # NEW: executives often have high stress/burnout
+        'typical_roi': "600-1200%"  # Updated to reflect sick leave benefits
     },
     'recruiting_optimization': {
         'name': "Recruiting Process Optimization",
@@ -143,10 +145,12 @@ def format_currency(amount):
 
 def get_roi_status(roi):
     """Get status and color for ROI"""
-    if roi >= 400:
-        return "🟢 Excellent (400%+)"
+    if roi >= 500:
+        return "🟢 Exceptional (500%+)"
+    elif roi >= 300:
+        return "🟢 Excellent (300-499%)"
     elif roi >= 200:
-        return "🟡 Good (200-399%)"
+        return "🟡 Good (200-299%)"
     elif roi >= 100:
         return "🟠 Moderate (100-199%)"
     else:
@@ -180,7 +184,22 @@ def calculate_leadership_roi(params):
         (params['avg_salary'] * 0.7) * (params['team_performance_gain'] / 100)
     )
     
-    total_annual_benefits = productivity_benefit + retention_savings + team_benefit
+    # NEW: Sick leave reduction benefit
+    # Typical company: 7-10 sick days per year, cost = daily salary + replacement costs
+    current_sick_days = params.get('current_sick_days', 8)
+    sick_leave_reduction_pct = params.get('sick_leave_reduction', 20) / 100
+    daily_salary = params['avg_salary'] / 250  # ~250 working days per year
+    
+    # Both direct (participants) and indirect (team members) benefit from better leadership
+    total_affected_employees = params['participants'] + (params['participants'] * team_size)
+    sick_leave_savings = (
+        total_affected_employees * 
+        current_sick_days * 
+        sick_leave_reduction_pct * 
+        daily_salary * 1.3  # Include replacement/coverage costs
+    )
+    
+    total_annual_benefits = productivity_benefit + retention_savings + team_benefit + sick_leave_savings
     
     # Calculate ROI
     roi = ((total_annual_benefits - total_incremental_costs) / total_incremental_costs * 100) if total_incremental_costs > 0 else 0
@@ -195,7 +214,8 @@ def calculate_leadership_roi(params):
         'benefit_breakdown': {
             'productivity': productivity_benefit,
             'retention': retention_savings,
-            'team_performance': team_benefit
+            'team_performance': team_benefit,
+            'sick_leave_reduction': sick_leave_savings
         },
         'cost_breakdown': {
             'facilitator_costs': params['facilitator_costs'],
@@ -426,17 +446,21 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
     story.append(Paragraph("Strategic Recommendations", styles['Heading2']))
     
     if is_single_initiative:
-        if overall_roi >= 400:
+        if overall_roi >= 500:
             recommendation = "✅ Exceptional ROI performance. Proceed with immediate implementation. Consider scaling this program to additional employee populations and similar roles."
+        elif overall_roi >= 300:
+            recommendation = "✅ Excellent ROI performance. Proceed with implementation. Monitor key metrics closely and prepare for potential expansion."
         elif overall_roi >= 200:
-            recommendation = "✅ Strong ROI performance. Proceed with implementation. Monitor key metrics closely and prepare for potential expansion."
+            recommendation = "✅ Strong ROI performance. Proceed with implementation. Consider optimizing program design for even better results."
         elif overall_roi >= 100:
             recommendation = "⚠️ Moderate ROI performance. Proceed with implementation but consider optimizing program design or targeting higher-impact participants."
         else:
             recommendation = "❌ Initiative requires optimization. Review assumptions, implementation strategy, and target population before proceeding."
     else:
-        if overall_roi >= 400:
+        if overall_roi >= 500:
             recommendation = "✅ Exceptional portfolio performance. Proceed with full implementation across all initiatives. Consider scaling successful programs and expanding to additional employee populations."
+        elif overall_roi >= 300:
+            recommendation = "✅ Excellent portfolio performance. Proceed with implementation, prioritizing highest ROI initiatives first. Monitor key metrics closely during rollout."
         elif overall_roi >= 200:
             recommendation = "✅ Strong portfolio performance. Proceed with implementation, prioritizing highest ROI initiatives first. Monitor key metrics closely during rollout."
         elif overall_roi >= 100:
@@ -454,9 +478,9 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
         
         priority_data = [['Priority', 'Initiative', 'ROI', 'Recommendation']]
         for i, init in enumerate(sorted_initiatives):
-            if init['ROI (%)'] >= 300:
+            if init['ROI (%)'] >= 400:
                 priority = "Phase 1 (Immediate)"
-            elif init['ROI (%)'] >= 150:
+            elif init['ROI (%)'] >= 200:
                 priority = "Phase 2 (3-6 months)"
             else:
                 priority = "Phase 3 (Review)"
@@ -465,7 +489,7 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
                 priority,
                 init['Initiative'],
                 f"{init['ROI (%)']:.0f}%",
-                "Implement" if init['ROI (%)'] >= 150 else "Optimize"
+                "Implement" if init['ROI (%)'] >= 200 else "Optimize"
             ])
         
         priority_table = Table(priority_data, colWidths=[1.5*inch, 2.5*inch, 1*inch, 1*inch])
@@ -485,7 +509,7 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
         # For single initiatives, add specific implementation guidance
         story.append(Paragraph("Implementation Guidance", styles['Heading3']))
         
-        if overall_roi >= 200:
+        if overall_roi >= 300:
             implementation_guidance = """Recommended Implementation Steps:
 
 1. Secure executive sponsorship and budget approval
@@ -561,7 +585,7 @@ Note: Analysis uses incremental cost accounting methodology
     
     comparison_text = "Initiative Rankings:\n\n"
     for i, init in enumerate(sorted_initiatives):
-        status_emoji = "🟢" if init['ROI (%)'] >= 400 else "🟡" if init['ROI (%)'] >= 200 else "🔴"
+        status_emoji = "🟢" if init['ROI (%)'] >= 500 else "🟢" if init['ROI (%)'] >= 300 else "🟡" if init['ROI (%)'] >= 200 else "🔴"
         comparison_text += f"{i+1}. {init['Initiative']}\n"
         comparison_text += f"   ROI: {init['ROI (%)']:.0f}% {status_emoji}\n"
         comparison_text += f"   Investment: {format_currency(init['Investment'])}\n\n"
@@ -601,12 +625,12 @@ Note: Analysis uses incremental cost accounting methodology
     title.text = "Implementation Roadmap"
     
     roadmap_text = """Phase 1 (Immediate - 0-3 months):
-• Launch initiatives with ROI ≥ 300%
+• Launch initiatives with ROI ≥ 400%
 • Secure executive sponsorship
 • Establish measurement frameworks
 
 Phase 2 (Short-term - 3-6 months):
-• Implement initiatives with ROI 150-299%
+• Implement initiatives with ROI 200-399%
 • Monitor Phase 1 results
 • Adjust programs based on early feedback
 
@@ -862,6 +886,13 @@ def display_initiative(initiative_key):
                     help="Improvement in team performance led by participants",
                     key=f"team_{initiative_key}"
                 )
+                params['sick_leave_reduction'] = st.slider(
+                    "Sick Leave Reduction (%)", 
+                    0, 40, 
+                    params.get('sick_leave_reduction', 20),
+                    help="Reduction in sick days due to better leadership and work environment",
+                    key=f"sick_leave_{initiative_key}"
+                )
                 
                 st.markdown("**⚙️ Advanced Settings**")
                 params['current_turnover'] = st.number_input(
@@ -877,6 +908,13 @@ def display_initiative(initiative_key):
                     min_value=1, 
                     value=params.get('team_size', 8),
                     key=f"teamsize_{initiative_key}"
+                )
+                params['current_sick_days'] = st.number_input(
+                    "Current Sick Days per Employee/Year", 
+                    min_value=0, 
+                    value=params.get('current_sick_days', 8),
+                    help="Average sick days taken per employee annually",
+                    key=f"sickdays_{initiative_key}"
                 )
             
             # Calculate and display results
@@ -1388,7 +1426,7 @@ INITIATIVE BREAKDOWN
 
 RECOMMENDATIONS
 ===============
-{"✅ Exceptional portfolio - proceed with full implementation" if overall_roi >= 400 else "✅ Strong portfolio - proceed with implementation, prioritize by ROI" if overall_roi >= 200 else "⚠️ Review highest-performing initiatives for priority implementation" if overall_roi >= 100 else "❌ Reassess assumptions and focus on highest ROI initiatives only"}
+{"✅ Exceptional portfolio - proceed with full implementation" if overall_roi >= 500 else "✅ Excellent portfolio - proceed with implementation, prioritize by ROI" if overall_roi >= 300 else "✅ Strong portfolio - proceed with implementation, prioritize by ROI" if overall_roi >= 200 else "⚠️ Review highest-performing initiatives for priority implementation" if overall_roi >= 100 else "❌ Reassess assumptions and focus on highest ROI initiatives only"}
 
 Generated by HR ROI Calculator (Incremental Cost Method)
 """
