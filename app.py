@@ -1659,7 +1659,7 @@ def display_initiative(initiative_key):
             st.plotly_chart(fig_cost, use_container_width=True)
     
     # Investment breakdown for time to fill optimization
-    elif initiative_key == 'time_to_fill_optimization' and 'investment_breakdown' in results:
+    if initiative_key == 'time_to_fill_optimization' and 'investment_breakdown' in results:
         col1, col2 = st.columns(2)
         
         with col1:
@@ -1676,13 +1676,10 @@ def display_initiative(initiative_key):
             # Investment pie chart
             fig_investment = px.pie(
                 values=list(investment_breakdown.values()),
-                names=list(investment_breakdown.keys()),
+                names=["Process Optimization", "Training", "Technology"],
                 title="Investment Breakdown"
             )
             st.plotly_chart(fig_investment, use_container_width=True)
-    
-    # Investment breakdown for recruiting optimization
-    elif initiative_key == 'recruiting_optimization' and 'investment_breakdown' in results:
         st.subheader("🎯 Recruiting Solution Improvements")
         col1, col2, col3, col4 = st.columns(4)
         
