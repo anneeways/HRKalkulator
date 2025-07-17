@@ -94,15 +94,21 @@ INITIATIVE_TEMPLATES = {
     },
     'recruiting_optimization': {
         'name': "Recruiting Process Optimization",
-        'description': "Technology and process improvements for faster, better hiring",
+        'description': "Technology investments, process improvements, and training to build a high-performing recruiting function",
         'annual_hires': 50,
         'current_time_to_hire': 45,
         'current_cost_per_hire': 5000,
+        'current_quality_score': 6.5,  # out of 10
         'time_to_hire_reduction': 35,
         'cost_per_hire_reduction': 25,
         'hire_quality_improvement': 20,
-        'recruiting_tech_investment': 30000,
-        'typical_roi': "200-350%"
+        'recruiting_tech_investment': 30000,  # ATS, AI tools, automation
+        'process_improvement_investment': 25000,  # Workflow design, consulting
+        'training_investment': 15000,  # Recruiter & hiring manager training
+        'external_agency_reduction': 30,  # % reduction in agency fees
+        'current_agency_spend': 150000,  # Annual agency spend
+        'candidate_experience_improvement': 25,  # % improvement
+        'typical_roi': "250-450%"
     },
     'time_to_fill_optimization': {
         'name': "Time to Fill Optimization",
@@ -243,39 +249,88 @@ def calculate_leadership_roi(params):
     }
 
 def calculate_recruiting_roi(params):
-    """Calculate Recruiting ROI"""
-    # Current metrics
-    current_time = params['current_time_to_hire']
-    current_cost = params['current_cost_per_hire']
+    """Calculate Recruiting Process Optimization ROI - Solution-focused approach"""
     annual_hires = params['annual_hires']
     
-    # Improvements
-    time_reduction = params['time_to_hire_reduction'] / 100
-    cost_reduction = params['cost_per_hire_reduction'] / 100
-    quality_improvement = params['hire_quality_improvement'] / 100
+    # === TECHNOLOGY & AUTOMATION BENEFITS ===
+    # 1. Time efficiency from better ATS/AI tools
+    current_time = params['current_time_to_hire']
+    time_reduction_pct = params['time_to_hire_reduction'] / 100
+    time_saved_days = current_time * time_reduction_pct
+    recruiter_time_savings = annual_hires * time_saved_days * params.get('recruiter_daily_cost', 320)  # $80K salary / 250 days
     
-    # Calculate savings
-    time_savings = annual_hires * current_time * time_reduction * params.get('daily_productivity_cost', 400)
-    cost_savings = annual_hires * current_cost * cost_reduction
-    quality_value = annual_hires * params.get('avg_salary', 95000) * quality_improvement * 0.15
+    # 2. Cost per hire reduction through process efficiency
+    current_cost = params['current_cost_per_hire']
+    cost_reduction_pct = params['cost_per_hire_reduction'] / 100
+    cost_savings = annual_hires * current_cost * cost_reduction_pct
     
-    total_annual_savings = time_savings + cost_savings + quality_value
-    total_investment = params['recruiting_tech_investment'] + params.get('training_costs', 15000)
+    # 3. External agency reduction (building internal capabilities)
+    current_agency_spend = params.get('current_agency_spend', 150000)
+    agency_reduction_pct = params.get('external_agency_reduction', 30) / 100
+    agency_savings = current_agency_spend * agency_reduction_pct
     
-    roi = ((total_annual_savings - total_investment) / total_investment * 100) if total_investment > 0 else 0
+    # === QUALITY & PERFORMANCE IMPROVEMENTS ===
+    # 4. Better hire quality (reduced turnover, faster ramp-up)
+    quality_improvement_pct = params['hire_quality_improvement'] / 100
+    avg_new_hire_salary = params.get('avg_new_hire_salary', 85000)
+    # Better screening reduces first-year turnover and improves performance
+    quality_value = annual_hires * avg_new_hire_salary * quality_improvement_pct * 0.25  # 25% of salary value
+    
+    # 5. Candidate experience improvements (better employer brand, faster offers)
+    candidate_experience_improvement = params.get('candidate_experience_improvement', 25) / 100
+    # Better candidate experience = higher offer acceptance rates, less time re-recruiting
+    offer_acceptance_improvement = annual_hires * 0.15 * candidate_experience_improvement * current_cost  # 15% re-recruiting cost
+    
+    # 6. Hiring manager efficiency (better trained managers make faster decisions)
+    hiring_manager_efficiency = annual_hires * params.get('hiring_manager_time_savings', 8) * 65  # 8 hours saved @ $65/hour
+    
+    # === STRATEGIC BENEFITS ===
+    # 7. Competitive advantage (winning talent faster)
+    competitive_advantage = annual_hires * params.get('competitive_win_rate_improvement', 0.10) * avg_new_hire_salary * 0.05  # 10% more wins
+    
+    total_annual_benefits = (
+        recruiter_time_savings + cost_savings + agency_savings + quality_value + 
+        offer_acceptance_improvement + hiring_manager_efficiency + competitive_advantage
+    )
+    
+    # === INVESTMENT COSTS ===
+    total_investment = (
+        params['recruiting_tech_investment'] + 
+        params.get('process_improvement_investment', 25000) + 
+        params.get('training_investment', 15000)
+    )
+    
+    # Calculate ROI
+    roi = ((total_annual_benefits - total_investment) / total_investment * 100) if total_investment > 0 else 0
+    
+    # Improved metrics
+    new_time_to_hire = current_time * (1 - time_reduction_pct)
+    new_cost_per_hire = current_cost * (1 - cost_reduction_pct)
+    new_quality_score = params.get('current_quality_score', 6.5) * (1 + quality_improvement_pct * 0.5)  # Quality improvement
     
     return {
         'total_investment': total_investment,
-        'annual_savings': total_annual_savings,
+        'annual_savings': total_annual_benefits,
         'roi': roi,
         'improved_metrics': {
-            'new_time_to_hire': current_time * (1 - time_reduction),
-            'new_cost_per_hire': current_cost * (1 - cost_reduction)
+            'new_time_to_hire': new_time_to_hire,
+            'new_cost_per_hire': new_cost_per_hire,
+            'new_quality_score': min(new_quality_score, 10.0),  # Cap at 10
+            'agency_spend_reduction': agency_savings
         },
-        'savings_breakdown': {
-            'time_savings': time_savings,
-            'cost_savings': cost_savings,
-            'quality_value': quality_value
+        'solution_benefits_breakdown': {
+            'technology_efficiency': recruiter_time_savings,
+            'process_cost_savings': cost_savings,
+            'agency_cost_reduction': agency_savings,
+            'hire_quality_value': quality_value,
+            'candidate_experience_value': offer_acceptance_improvement,
+            'hiring_manager_efficiency': hiring_manager_efficiency,
+            'competitive_advantage': competitive_advantage
+        },
+        'investment_breakdown': {
+            'technology_investment': params['recruiting_tech_investment'],
+            'process_improvement': params.get('process_improvement_investment', 25000),
+            'training_investment': params.get('training_investment', 15000)
         }
     }
 
@@ -847,6 +902,10 @@ def main():
         This approach provides a more accurate view of the actual investment required and expected returns,
         avoiding the "apples to oranges" comparison of treating salaries as costs while calculating productivity 
         gains as benefits.
+        
+        **💡 Hiring Calculators Work Together:**
+        - **Time to Fill Optimization**: "What does slow hiring cost us?" (Business case)
+        - **Recruiting Process Optimization**: "How do we fix our hiring?" (Solution planning)
         """)
     
     # Show export capabilities
@@ -1070,43 +1129,126 @@ def display_initiative(initiative_key):
             
         elif initiative_key == 'recruiting_optimization':
             with col1:
+                st.markdown("**📊 Current Recruiting State**")
                 params['annual_hires'] = st.number_input(
                     "Annual Hires", 
                     min_value=1, 
                     value=params['annual_hires'],
+                    help="Total number of hires per year",
                     key=f"hires_{initiative_key}"
                 )
                 params['current_time_to_hire'] = st.number_input(
                     "Current Time to Hire (days)", 
                     min_value=1, 
                     value=params['current_time_to_hire'],
+                    help="Average days from posting to offer acceptance",
                     key=f"time_{initiative_key}"
                 )
                 params['current_cost_per_hire'] = st.number_input(
                     "Current Cost per Hire ($)", 
                     min_value=0, 
                     value=params['current_cost_per_hire'],
+                    help="Total cost per hire (excluding salary)",
                     key=f"cost_{initiative_key}"
+                )
+                params['current_quality_score'] = st.number_input(
+                    "Current Hire Quality Score (1-10)", 
+                    min_value=1.0, 
+                    max_value=10.0,
+                    value=params.get('current_quality_score', 6.5),
+                    step=0.5,
+                    help="Current quality of hires (performance, fit, retention)",
+                    key=f"quality_score_{initiative_key}"
+                )
+                params['current_agency_spend'] = st.number_input(
+                    "Annual External Agency Spend ($)", 
+                    min_value=0, 
+                    value=params.get('current_agency_spend', 150000),
+                    step=10000,
+                    help="Current spending on external recruiting agencies",
+                    key=f"agency_spend_{initiative_key}"
+                )
+                
+                st.markdown("**💰 Solution Investments**")
+                params['recruiting_tech_investment'] = st.number_input(
+                    "Technology Investment ($)", 
+                    min_value=0, 
+                    value=params['recruiting_tech_investment'], 
+                    step=5000,
+                    help="ATS upgrades, AI tools, automation platforms",
+                    key=f"tech_invest_{initiative_key}"
+                )
+                params['process_improvement_investment'] = st.number_input(
+                    "Process Improvement Investment ($)", 
+                    min_value=0, 
+                    value=params.get('process_improvement_investment', 25000), 
+                    step=5000,
+                    help="Workflow design, consulting, process optimization",
+                    key=f"process_invest_{initiative_key}"
+                )
+                params['training_investment'] = st.number_input(
+                    "Training Investment ($)", 
+                    min_value=0, 
+                    value=params.get('training_investment', 15000), 
+                    step=1000,
+                    help="Recruiter training, hiring manager development",
+                    key=f"training_invest_{initiative_key}"
                 )
             
             with col2:
+                st.markdown("**📈 Expected Process Improvements**")
                 params['time_to_hire_reduction'] = st.slider(
-                    "Time Reduction (%)", 
-                    0, 50, 
+                    "Time to Hire Reduction (%)", 
+                    0, 60, 
                     params['time_to_hire_reduction'],
+                    help="Expected reduction in time to hire through better processes",
                     key=f"time_reduction_{initiative_key}"
                 )
                 params['cost_per_hire_reduction'] = st.slider(
-                    "Cost Reduction (%)", 
+                    "Cost per Hire Reduction (%)", 
                     0, 50, 
                     params['cost_per_hire_reduction'],
+                    help="Cost reduction through process efficiency and technology",
                     key=f"cost_reduction_{initiative_key}"
                 )
                 params['hire_quality_improvement'] = st.slider(
-                    "Quality Improvement (%)", 
-                    0, 30, 
+                    "Hire Quality Improvement (%)", 
+                    0, 40, 
                     params['hire_quality_improvement'],
+                    help="Quality improvement through better screening and processes",
                     key=f"quality_{initiative_key}"
+                )
+                params['external_agency_reduction'] = st.slider(
+                    "External Agency Reduction (%)", 
+                    0, 80, 
+                    params.get('external_agency_reduction', 30),
+                    help="Reduction in external agency usage by building internal capabilities",
+                    key=f"agency_reduction_{initiative_key}"
+                )
+                params['candidate_experience_improvement'] = st.slider(
+                    "Candidate Experience Improvement (%)", 
+                    0, 50, 
+                    params.get('candidate_experience_improvement', 25),
+                    help="Improvement in candidate experience and employer brand",
+                    key=f"candidate_exp_{initiative_key}"
+                )
+                
+                st.markdown("**⚙️ Advanced Parameters**")
+                params['avg_new_hire_salary'] = st.number_input(
+                    "Average New Hire Salary ($)", 
+                    min_value=0, 
+                    value=params.get('avg_new_hire_salary', 85000),
+                    step=5000,
+                    help="Average salary of new hires",
+                    key=f"avg_salary_{initiative_key}"
+                )
+                params['recruiter_daily_cost'] = st.number_input(
+                    "Recruiter Daily Cost ($)", 
+                    min_value=0, 
+                    value=params.get('recruiter_daily_cost', 320),
+                    step=20,
+                    help="Daily cost of recruiter time (salary + benefits / 250 days)",
+                    key=f"recruiter_cost_{initiative_key}"
                 )
             
             results = calculate_recruiting_roi(params)
@@ -1539,6 +1681,125 @@ def display_initiative(initiative_key):
             )
             st.plotly_chart(fig_investment, use_container_width=True)
     
+    # Investment breakdown for recruiting optimization
+    elif initiative_key == 'recruiting_optimization' and 'investment_breakdown' in results:
+        st.subheader("🎯 Recruiting Solution Improvements")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            current_time = params['current_time_to_hire']
+            new_time = results['improved_metrics']['new_time_to_hire']
+            st.metric(
+                "Time to Hire",
+                f"{new_time:.0f} days",
+                delta=f"-{current_time - new_time:.0f} days"
+            )
+        
+        with col2:
+            current_cost = params['current_cost_per_hire']
+            new_cost = results['improved_metrics']['new_cost_per_hire']
+            st.metric(
+                "Cost per Hire",
+                format_currency(new_cost),
+                delta=f"-{format_currency(current_cost - new_cost)}"
+            )
+        
+        with col3:
+            current_quality = params.get('current_quality_score', 6.5)
+            new_quality = results['improved_metrics']['new_quality_score']
+            st.metric(
+                "Hire Quality Score",
+                f"{new_quality:.1f}/10",
+                delta=f"+{new_quality - current_quality:.1f}"
+            )
+        
+        with col4:
+            agency_savings = results['improved_metrics']['agency_spend_reduction']
+            st.metric(
+                "Annual Agency Savings",
+                format_currency(agency_savings)
+            )
+        
+        # Investment vs Benefits breakdown
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("💰 Solution Investments")
+            investment_breakdown = results['investment_breakdown']
+            investment_df = pd.DataFrame([
+                {"Investment Type": "Technology & Tools", "Amount": investment_breakdown['technology_investment']},
+                {"Investment Type": "Process Improvement", "Amount": investment_breakdown['process_improvement']},
+                {"Investment Type": "Training & Development", "Amount": investment_breakdown['training_investment']},
+            ])
+            st.dataframe(investment_df, hide_index=True, use_container_width=True)
+            
+            # Investment pie chart
+            fig_investment = px.pie(
+                values=list(investment_breakdown.values()),
+                names=["Technology", "Process", "Training"],
+                title="Investment Allocation"
+            )
+            st.plotly_chart(fig_investment, use_container_width=True)
+            
+        with col2:
+            st.subheader("📈 Solution Benefits")
+            benefits_breakdown = results['solution_benefits_breakdown']
+            benefits_df = pd.DataFrame([
+                {"Benefit Category": "Technology Efficiency", "Annual Value": benefits_breakdown['technology_efficiency']},
+                {"Benefit Category": "Process Cost Savings", "Annual Value": benefits_breakdown['process_cost_savings']},
+                {"Benefit Category": "Agency Cost Reduction", "Annual Value": benefits_breakdown['agency_cost_reduction']},
+                {"Benefit Category": "Hire Quality Value", "Annual Value": benefits_breakdown['hire_quality_value']},
+                {"Benefit Category": "Candidate Experience", "Annual Value": benefits_breakdown['candidate_experience_value']},
+                {"Benefit Category": "Manager Efficiency", "Annual Value": benefits_breakdown['hiring_manager_efficiency']},
+                {"Benefit Category": "Competitive Advantage", "Annual Value": benefits_breakdown['competitive_advantage']},
+            ])
+            benefits_df['Annual Value'] = benefits_df['Annual Value'].apply(format_currency)
+            st.dataframe(benefits_df, hide_index=True, use_container_width=True)
+        
+        # Combined solution benefits chart
+        st.subheader("📊 Recruiting Solution Benefits Breakdown")
+        
+        fig = px.bar(
+            x=list(benefits_breakdown.keys()),
+            y=list(benefits_breakdown.values()),
+            title="Annual Benefits by Solution Category",
+            color=list(benefits_breakdown.values()),
+            color_continuous_scale="Blues"
+        )
+        fig.update_layout(
+            xaxis_title="Benefit Category",
+            yaxis_title="Annual Value ($)",
+            showlegend=False,
+            xaxis_tickangle=-45
+        )
+        # Rename x-axis labels for better readability
+        fig.update_xaxes(
+            ticktext=["Technology Efficiency", "Process Savings", "Agency Reduction", 
+                     "Quality Value", "Candidate Experience", "Manager Efficiency", "Competitive Edge"],
+            tickvals=list(range(len(benefits_breakdown)))
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("💰 Investment Breakdown")
+            investment_breakdown = results['investment_breakdown']
+            investment_df = pd.DataFrame([
+                {"Investment Category": "Process Optimization", "Amount": investment_breakdown['optimization_investment']},
+                {"Investment Category": "Training", "Amount": investment_breakdown['training_costs']},
+                {"Investment Category": "Technology", "Amount": investment_breakdown['technology_costs']},
+            ])
+            st.dataframe(investment_df, hide_index=True)
+            
+        with col2:
+            # Investment pie chart
+            fig_investment = px.pie(
+                values=list(investment_breakdown.values()),
+                names=list(investment_breakdown.keys()),
+                title="Investment Breakdown"
+            )
+            st.plotly_chart(fig_investment, use_container_width=True)
+    
     # Benefits breakdown chart
     if 'benefit_breakdown' in results:
         breakdown = results['benefit_breakdown']
@@ -1558,6 +1819,9 @@ def display_initiative(initiative_key):
         st.plotly_chart(fig, use_container_width=True)
     elif 'cost_savings_breakdown' in results and 'revenue_impact_breakdown' in results:
         # This is handled in the time to fill section above
+        pass
+    elif 'solution_benefits_breakdown' in results:
+        # This is handled in the recruiting optimization section above
         pass
     
     # Export options for individual initiative
