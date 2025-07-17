@@ -785,6 +785,176 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
+    # KPI Helper Calculator
+    with st.expander("🧮 KPI Helper Calculator - Calculate Your Baseline Metrics", expanded=False):
+        st.markdown("**Use these calculators to determine the input values for your ROI analysis:**")
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["💰 Cost Metrics", "⏰ Time Metrics", "📊 Performance Metrics", "💵 Revenue Metrics"])
+        
+        with tab1:
+            st.subheader("💰 Cost Calculation Helpers")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Cost per Hire Calculator**")
+                external_costs = st.number_input("External Costs (agencies, job boards) ($)", min_value=0, value=3000, step=100, key="cph_external")
+                internal_costs = st.number_input("Internal Costs (recruiter time, interviews) ($)", min_value=0, value=2000, step=100, key="cph_internal")
+                total_hires = st.number_input("Number of Hires", min_value=1, value=10, key="cph_hires")
+                cost_per_hire = (external_costs + internal_costs) / total_hires
+                st.success(f"**Cost per Hire: {format_currency(cost_per_hire)}**")
+                
+                st.markdown("**Turnover Cost Calculator**")
+                avg_salary = st.number_input("Average Salary ($)", min_value=0, value=75000, step=5000, key="tc_salary")
+                turnover_multiplier = st.selectbox("Turnover Cost Multiplier", [0.5, 0.75, 1.0, 1.5, 2.0], index=3, key="tc_mult")
+                st.info(f"0.5x = Entry level, 1.5x = Professional, 2.0x = Senior roles")
+                turnover_cost = avg_salary * turnover_multiplier
+                st.success(f"**Turnover Cost: {format_currency(turnover_cost)}**")
+            
+            with col2:
+                st.markdown("**Training Cost Calculator**")
+                facilitator_daily_rate = st.number_input("Facilitator Daily Rate ($)", min_value=0, value=2000, step=100, key="tc_facilitator")
+                training_days = st.number_input("Training Days", min_value=1, value=5, key="tc_days")
+                materials_per_person = st.number_input("Materials per Person ($)", min_value=0, value=500, step=50, key="tc_materials")
+                venue_daily = st.number_input("Venue Cost per Day ($)", min_value=0, value=800, step=100, key="tc_venue")
+                participants = st.number_input("Number of Participants", min_value=1, value=20, key="tc_participants")
+                
+                total_training_cost = (facilitator_daily_rate * training_days) + (materials_per_person * participants) + (venue_daily * training_days)
+                cost_per_participant = total_training_cost / participants
+                
+                st.success(f"**Total Training Cost: {format_currency(total_training_cost)}**")
+                st.success(f"**Cost per Participant: {format_currency(cost_per_participant)}**")
+        
+        with tab2:
+            st.subheader("⏰ Time Calculation Helpers")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Time to Productivity Calculator**")
+                role_complexity = st.selectbox("Role Complexity", ["Entry Level", "Mid Level", "Senior Level", "Executive"], key="ttp_complexity")
+                complexity_months = {"Entry Level": 2, "Mid Level": 4, "Senior Level": 6, "Executive": 9}
+                industry_factor = st.selectbox("Industry Learning Curve", ["Low (Tech/Service)", "Medium (Manufacturing)", "High (Healthcare/Finance)"], key="ttp_industry")
+                industry_multiplier = {"Low (Tech/Service)": 0.8, "Medium (Manufacturing)": 1.0, "High (Healthcare/Finance)": 1.3}
+                
+                base_months = complexity_months[role_complexity]
+                adjusted_months = base_months * industry_multiplier[industry_factor]
+                st.success(f"**Estimated Time to Productivity: {adjusted_months:.1f} months**")
+                
+                st.markdown("**Daily Productivity Value Calculator**")
+                annual_salary = st.number_input("Annual Salary ($)", min_value=0, value=80000, step=5000, key="dpv_salary")
+                productivity_multiplier = st.number_input("Productivity Multiplier", min_value=1.0, max_value=5.0, value=2.5, step=0.1, key="dpv_mult")
+                st.info("Productivity multiplier: How much value they create vs. their salary")
+                
+                daily_value = (annual_salary * productivity_multiplier) / 250
+                st.success(f"**Daily Productivity Value: {format_currency(daily_value)}**")
+            
+            with col2:
+                st.markdown("**Time to Fill Benchmarks**")
+                position_level = st.selectbox("Position Level", ["Entry Level", "Professional", "Manager", "Director+"], key="ttf_level")
+                industry_type = st.selectbox("Industry Type", ["Technology", "Healthcare", "Finance", "Manufacturing", "Retail"], key="ttf_industry")
+                
+                # Benchmark data (industry averages)
+                benchmarks = {
+                    "Entry Level": {"Technology": 25, "Healthcare": 30, "Finance": 35, "Manufacturing": 28, "Retail": 20},
+                    "Professional": {"Technology": 35, "Healthcare": 45, "Finance": 50, "Manufacturing": 40, "Retail": 30},
+                    "Manager": {"Technology": 50, "Healthcare": 60, "Finance": 65, "Manufacturing": 55, "Retail": 45},
+                    "Director+": {"Technology": 75, "Healthcare": 85, "Finance": 90, "Manufacturing": 80, "Retail": 65}
+                }
+                
+                benchmark_days = benchmarks[position_level][industry_type]
+                st.success(f"**Industry Benchmark: {benchmark_days} days**")
+                st.info(f"🎯 Good target: {int(benchmark_days * 0.8)} days (-20%)")
+                st.info(f"🚀 Excellent target: {int(benchmark_days * 0.6)} days (-40%)")
+        
+        with tab3:
+            st.subheader("📊 Performance Impact Calculators")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Engagement Impact Calculator**")
+                current_engagement = st.number_input("Current Engagement Score (1-10)", min_value=1.0, max_value=10.0, value=6.5, step=0.1, key="ei_current")
+                target_engagement = st.number_input("Target Engagement Score (1-10)", min_value=1.0, max_value=10.0, value=8.0, step=0.1, key="ei_target")
+                
+                engagement_improvement = target_engagement - current_engagement
+                productivity_impact = engagement_improvement * 0.02  # Research shows 2% productivity gain per engagement point
+                
+                st.success(f"**Engagement Improvement: +{engagement_improvement:.1f} points**")
+                st.success(f"**Estimated Productivity Impact: +{productivity_impact:.1%}**")
+                
+                st.markdown("**Absenteeism Impact Calculator**")
+                current_sick_days = st.number_input("Current Sick Days/Employee/Year", min_value=0, value=8, key="ai_current")
+                industry_benchmark = st.selectbox("Industry Benchmark", ["Low (5 days)", "Average (8 days)", "High (12 days)"], key="ai_benchmark")
+                benchmark_days = {"Low (5 days)": 5, "Average (8 days)": 8, "High (12 days)": 12}[industry_benchmark]
+                
+                potential_reduction = max(0, current_sick_days - benchmark_days)
+                st.success(f"**Potential Reduction: {potential_reduction} days/year**")
+                
+            with col2:
+                st.markdown("**Retention Impact Calculator**")
+                current_turnover = st.number_input("Current Turnover Rate (%)", min_value=0.0, max_value=100.0, value=18.0, step=1.0, key="ri_current")
+                industry_avg = st.selectbox("Industry Average", ["Low (8%)", "Medium (15%)", "High (25%)"], key="ri_industry")
+                industry_turnover = {"Low (8%)": 8, "Medium (15%)": 15, "High (25%)": 25}[industry_avg]
+                
+                improvement_potential = max(0, current_turnover - industry_turnover)
+                st.success(f"**Improvement Potential: -{improvement_potential:.1f}%**")
+                
+                total_employees = st.number_input("Total Employees", min_value=1, value=100, key="ri_employees")
+                avg_salary_retention = st.number_input("Average Salary ($)", min_value=0, value=75000, step=5000, key="ri_salary")
+                
+                annual_savings_potential = (improvement_potential / 100) * total_employees * avg_salary_retention * 1.5
+                st.success(f"**Annual Savings Potential: {format_currency(annual_savings_potential)}**")
+        
+        with tab4:
+            st.subheader("💵 Revenue Impact Calculators")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Daily Revenue per Employee Calculator**")
+                
+                calculation_method = st.selectbox("Calculation Method", ["Revenue-based", "Profit-based", "Role-specific"], key="rev_method")
+                
+                if calculation_method == "Revenue-based":
+                    annual_revenue = st.number_input("Annual Company Revenue ($)", min_value=0, value=10000000, step=100000, key="rev_annual")
+                    total_employees_rev = st.number_input("Total Employees", min_value=1, value=100, key="rev_employees")
+                    revenue_attribution = st.slider("Revenue Attribution (%)", 0, 100, 70, help="% of revenue attributable to employees vs. capital/systems", key="rev_attribution")
+                    
+                    daily_revenue_per_employee = (annual_revenue * (revenue_attribution/100)) / total_employees_rev / 250
+                    st.success(f"**Daily Revenue per Employee: {format_currency(daily_revenue_per_employee)}**")
+                
+                elif calculation_method == "Role-specific":
+                    role_type = st.selectbox("Role Type", ["Sales", "Customer Service", "Production", "Support"], key="rev_role")
+                    if role_type == "Sales":
+                        annual_quota = st.number_input("Annual Sales Quota ($)", min_value=0, value=500000, step=10000, key="rev_quota")
+                        daily_revenue_per_employee = annual_quota / 250
+                    else:
+                        st.info("Select role-specific metrics based on your industry")
+                        daily_revenue_per_employee = 800  # Default
+                    
+                    st.success(f"**Daily Revenue per Employee: {format_currency(daily_revenue_per_employee)}**")
+            
+            with col2:
+                st.markdown("**Productivity Loss Calculator**")
+                position_criticality = st.selectbox("Position Criticality", ["Non-critical", "Important", "Critical", "Mission-critical"], key="pl_criticality")
+                criticality_loss = {"Non-critical": 30, "Important": 50, "Critical": 70, "Mission-critical": 90}
+                
+                baseline_loss = criticality_loss[position_criticality]
+                
+                backup_coverage = st.selectbox("Backup Coverage", ["None", "Partial", "Good", "Excellent"], key="pl_backup")
+                coverage_reduction = {"None": 0, "Partial": 10, "Good": 20, "Excellent": 30}
+                
+                final_productivity_loss = max(10, baseline_loss - coverage_reduction[backup_coverage])
+                
+                st.success(f"**Estimated Productivity Loss: {final_productivity_loss}%**")
+                
+                st.markdown("**Customer Impact Calculator**")
+                customer_facing = st.selectbox("Customer-Facing Role?", ["No", "Indirect", "Direct", "Primary contact"], key="ci_facing")
+                impact_factors = {"No": 0, "Indirect": 5, "Direct": 15, "Primary contact": 25}
+                
+                customer_impact = impact_factors[customer_facing]
+                st.success(f"**Customer Impact Factor: {customer_impact}%**")
+        
+        st.markdown("---")
+        st.info("💡 **Tip:** Use these calculated values as inputs in your ROI analysis above. Save this page for future reference!")
+    
     # Methodology explanation
     with st.expander("📊 About Our ROI Methodology", expanded=False):
         st.markdown("""
@@ -863,11 +1033,20 @@ def main():
                 with col1:
                     st.write(f"• {INITIATIVE_TEMPLATES[initiative]['name']}")
                 with col2:
-                    if st.button("❌", key=f"remove_{initiative}"):
+                    if st.button("Remove", key=f"remove_{initiative}", help="Click to remove this initiative"):
                         st.session_state.selected_initiatives.remove(initiative)
                         if initiative in st.session_state.params:
                             del st.session_state.params[initiative]
+                        st.success(f"Removed {INITIATIVE_TEMPLATES[initiative]['name']}")
                         st.rerun()
+            
+            # Clear all button
+            st.divider()
+            if st.button("🗑️ Clear All", help="Remove all selected initiatives"):
+                st.session_state.selected_initiatives.clear()
+                st.session_state.params.clear()
+                st.success("All initiatives cleared!")
+                st.rerun()
         else:
             st.info("No initiatives selected yet")
     
