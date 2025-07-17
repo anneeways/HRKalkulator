@@ -1028,27 +1028,37 @@ def main():
         # Currently selected initiatives
         st.subheader("✅ Selected Initiatives")
         if st.session_state.selected_initiatives:
+            st.info("💡 Click the red 🗑️ button next to any initiative to remove it")
+            
             for initiative in st.session_state.selected_initiatives:
-                col1, col2 = st.columns([3, 1])
+                col1, col2 = st.columns([4, 1])
                 with col1:
-                    st.write(f"• {INITIATIVE_TEMPLATES[initiative]['name']}")
+                    st.write(f"📊 {INITIATIVE_TEMPLATES[initiative]['name']}")
                 with col2:
-                    if st.button("Remove", key=f"remove_{initiative}", help="Click to remove this initiative"):
+                    if st.button("🗑️", key=f"remove_{initiative}", help="Remove this initiative", type="secondary"):
                         st.session_state.selected_initiatives.remove(initiative)
                         if initiative in st.session_state.params:
                             del st.session_state.params[initiative]
-                        st.success(f"Removed {INITIATIVE_TEMPLATES[initiative]['name']}")
+                        st.success(f"✅ Removed: {INITIATIVE_TEMPLATES[initiative]['name']}")
                         st.rerun()
             
             # Clear all button
             st.divider()
-            if st.button("🗑️ Clear All", help="Remove all selected initiatives"):
-                st.session_state.selected_initiatives.clear()
-                st.session_state.params.clear()
-                st.success("All initiatives cleared!")
-                st.rerun()
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🗑️ Remove All", help="Remove all selected initiatives", type="secondary"):
+                    cleared_count = len(st.session_state.selected_initiatives)
+                    st.session_state.selected_initiatives.clear()
+                    st.session_state.params.clear()
+                    st.success(f"✅ Cleared {cleared_count} initiatives!")
+                    st.rerun()
+            with col2:
+                st.write(f"**Total selected:** {len(st.session_state.selected_initiatives)}")
         else:
-            st.info("No initiatives selected yet")
+            st.info("👈 No initiatives selected yet. Use the 'Add' buttons above to get started!")
+            st.markdown("**How to remove initiatives:**")
+            st.markdown("- Individual: Click 🗑️ next to each initiative")
+            st.markdown("- All at once: Use 'Remove All' button")
     
     # Main content
     if not st.session_state.selected_initiatives:
