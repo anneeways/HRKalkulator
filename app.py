@@ -1,10 +1,4 @@
-# Methodology explanation
-    with st.expander("📊 About Our ROI Methodology", expanded=False):
-        st.markdown("""
-        **Incremental Cost Accounting Approach:**
-        
-        - **Costs**: Only true incremental expenses (facilitator fees, materials, venues, travel)
-        - **Benefits**: Incremental value above baseline pimport streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import json
@@ -98,24 +92,6 @@ INITIATIVE_TEMPLATES = {
         'sick_leave_reduction': 25,
         'typical_roi': "600-1200%"
     },
-    'recruiting_optimization': {
-        'name': "Recruiting Process Optimization",
-        'description': "Technology investments, process improvements, and training to build a high-performing recruiting function",
-        'annual_hires': 50,
-        'current_time_to_hire': 45,
-        'current_cost_per_hire': 5000,
-        'current_quality_score': 6.5,  # out of 10
-        'time_to_hire_reduction': 35,
-        'cost_per_hire_reduction': 25,
-        'hire_quality_improvement': 20,
-        'recruiting_tech_investment': 30000,  # ATS, AI tools, automation
-        'process_improvement_investment': 25000,  # Workflow design, consulting
-        'training_investment': 15000,  # Recruiter & hiring manager training
-        'external_agency_reduction': 30,  # % reduction in agency fees
-        'current_agency_spend': 150000,  # Annual agency spend
-        'candidate_experience_improvement': 25,  # % improvement
-        'typical_roi': "250-450%"
-    },
     'time_to_fill_optimization': {
         'name': "Time to Fill Optimization",
         'description': "Reduce time to fill vacant positions through process improvements, technology, and recruiter training - includes both cost savings and revenue impact analysis",
@@ -129,9 +105,9 @@ INITIATIVE_TEMPLATES = {
         'optimization_investment': 45000,
         'training_costs': 15000,
         'technology_costs': 25000,
-        'revenue_generating_percentage': 60,  # NEW: % of roles that generate revenue
-        'revenue_per_employee_daily': 800,   # NEW: Daily revenue per employee
-        'customer_impact_factor': 25,        # NEW: % revenue loss due to service delays
+        'revenue_generating_percentage': 60,
+        'revenue_per_employee_daily': 800,
+        'customer_impact_factor': 25,
         'typical_roi': "400-800%"
     },
     'onboarding_excellence': {
@@ -302,14 +278,13 @@ def calculate_time_to_fill_roi(params):
     direct_revenue_loss_prevented = revenue_positions * days_saved * revenue_per_employee_daily
     
     # 2. Customer service/satisfaction impact on remaining revenue
-    # When key positions are vacant, it affects service quality and customer retention
     customer_impact_loss_prevented = (
         annual_positions * days_saved * revenue_per_employee_daily * 
         customer_impact_factor * params.get('customer_base_factor', 0.15)
     )
     
     # 3. Lost opportunity costs (deals not closed, projects delayed)
-    opportunity_cost_factor = params.get('opportunity_cost_factor', 0.20)  # 20% of daily revenue
+    opportunity_cost_factor = params.get('opportunity_cost_factor', 0.20)
     opportunity_loss_prevented = (
         revenue_positions * days_saved * revenue_per_employee_daily * opportunity_cost_factor
     )
@@ -317,7 +292,7 @@ def calculate_time_to_fill_roi(params):
     # 4. Market share protection (competitors don't gain ground)
     market_share_protection = (
         revenue_positions * days_saved * revenue_per_employee_daily * 
-        params.get('market_share_factor', 0.05)  # 5% market impact
+        params.get('market_share_factor', 0.05)
     )
     
     total_revenue_protection = (
@@ -822,10 +797,6 @@ def main():
         This approach provides a more accurate view of the actual investment required and expected returns,
         avoiding the "apples to oranges" comparison of treating salaries as costs while calculating productivity 
         gains as benefits.
-        
-        **💡 Hiring Calculators Work Together:**
-        - **Time to Fill Optimization**: "What does slow hiring cost us?" (Business case)
-        - **Recruiting Process Optimization**: "How do we fix our hiring?" (Solution planning)
         """)
     
     # Show export capabilities
@@ -1440,6 +1411,8 @@ def display_initiative(initiative_key):
                 showlegend=True
             )
             st.plotly_chart(fig, use_container_width=True)
+    
+    # Cost breakdown for leadership/coaching programs
     if initiative_key in ['leadership_development', 'executive_coaching'] and 'cost_breakdown' in results:
         col1, col2 = st.columns(2)
         
@@ -1485,125 +1458,6 @@ def display_initiative(initiative_key):
                 title="Investment Breakdown"
             )
             st.plotly_chart(fig_investment, use_container_width=True)
-        st.subheader("🎯 Recruiting Solution Improvements")
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            current_time = params.get('current_time_to_hire', 45)
-            new_time = results['improved_metrics']['new_time_to_hire']
-            st.metric(
-                "Time to Hire",
-                f"{new_time:.0f} days",
-                delta=f"-{current_time - new_time:.0f} days"
-            )
-        
-        with col2:
-            current_cost = params.get('current_cost_per_hire', 5000)
-            new_cost = results['improved_metrics']['new_cost_per_hire']
-            st.metric(
-                "Cost per Hire",
-                format_currency(new_cost),
-                delta=f"-{format_currency(current_cost - new_cost)}"
-            )
-        
-        with col3:
-            current_quality = params.get('current_quality_score', 6.5)
-            new_quality = results['improved_metrics']['new_quality_score']
-            st.metric(
-                "Hire Quality Score",
-                f"{new_quality:.1f}/10",
-                delta=f"+{new_quality - current_quality:.1f}"
-            )
-        
-        with col4:
-            agency_savings = results['improved_metrics'].get('agency_spend_reduction', 0)
-            st.metric(
-                "Annual Agency Savings",
-                format_currency(agency_savings)
-            )
-        
-        # Investment vs Benefits breakdown
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("💰 Solution Investments")
-            investment_breakdown = results.get('investment_breakdown', {})
-            investment_df = pd.DataFrame([
-                {"Investment Type": "Technology & Tools", "Amount": investment_breakdown.get('technology_investment', 0)},
-                {"Investment Type": "Process Improvement", "Amount": investment_breakdown.get('process_improvement', 0)},
-                {"Investment Type": "Training & Development", "Amount": investment_breakdown.get('training_investment', 0)},
-            ])
-            st.dataframe(investment_df, hide_index=True, use_container_width=True)
-            
-            # Investment pie chart
-            if investment_breakdown:
-                fig_investment = px.pie(
-                    values=list(investment_breakdown.values()),
-                    names=["Technology", "Process", "Training"],
-                    title="Investment Allocation"
-                )
-                st.plotly_chart(fig_investment, use_container_width=True)
-            
-        with col2:
-            st.subheader("📈 Solution Benefits")
-            benefits_breakdown = results.get('solution_benefits_breakdown', {})
-            benefits_df = pd.DataFrame([
-                {"Benefit Category": "Technology Efficiency", "Annual Value": benefits_breakdown.get('technology_efficiency', 0)},
-                {"Benefit Category": "Process Cost Savings", "Annual Value": benefits_breakdown.get('process_cost_savings', 0)},
-                {"Benefit Category": "Agency Cost Reduction", "Annual Value": benefits_breakdown.get('agency_cost_reduction', 0)},
-                {"Benefit Category": "Hire Quality Value", "Annual Value": benefits_breakdown.get('hire_quality_value', 0)},
-                {"Benefit Category": "Candidate Experience", "Annual Value": benefits_breakdown.get('candidate_experience_value', 0)},
-                {"Benefit Category": "Manager Efficiency", "Annual Value": benefits_breakdown.get('hiring_manager_efficiency', 0)},
-                {"Benefit Category": "Competitive Advantage", "Annual Value": benefits_breakdown.get('competitive_advantage', 0)},
-            ])
-            benefits_df['Annual Value'] = benefits_df['Annual Value'].apply(format_currency)
-            st.dataframe(benefits_df, hide_index=True, use_container_width=True)
-        
-        # Combined solution benefits chart
-        st.subheader("📊 Recruiting Solution Benefits Breakdown")
-        
-        benefits_breakdown = results.get('solution_benefits_breakdown', {})
-        if benefits_breakdown:  # Only create chart if we have data
-            fig = px.bar(
-                x=list(benefits_breakdown.keys()),
-                y=list(benefits_breakdown.values()),
-                title="Annual Benefits by Solution Category",
-                color=list(benefits_breakdown.values()),
-                color_continuous_scale="Blues"
-            )
-            fig.update_layout(
-                xaxis_title="Benefit Category",
-                yaxis_title="Annual Value ($)",
-                showlegend=False,
-                xaxis_tickangle=-45
-            )
-            # Rename x-axis labels for better readability
-            fig.update_xaxes(
-                ticktext=["Technology Efficiency", "Process Savings", "Agency Reduction", 
-                         "Quality Value", "Candidate Experience", "Manager Efficiency", "Competitive Edge"],
-                tickvals=list(range(len(benefits_breakdown)))
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("💰 Investment Breakdown")
-            investment_breakdown = results['investment_breakdown']
-            investment_df = pd.DataFrame([
-                {"Investment Category": "Process Optimization", "Amount": investment_breakdown['optimization_investment']},
-                {"Investment Category": "Training", "Amount": investment_breakdown['training_costs']},
-                {"Investment Category": "Technology", "Amount": investment_breakdown['technology_costs']},
-            ])
-            st.dataframe(investment_df, hide_index=True)
-            
-        with col2:
-            # Investment pie chart
-            fig_investment = px.pie(
-                values=list(investment_breakdown.values()),
-                names=list(investment_breakdown.keys()),
-                title="Investment Breakdown"
-            )
-            st.plotly_chart(fig_investment, use_container_width=True)
     
     # Benefits breakdown chart
     if 'benefit_breakdown' in results:
@@ -1624,9 +1478,6 @@ def display_initiative(initiative_key):
         st.plotly_chart(fig, use_container_width=True)
     elif 'cost_savings_breakdown' in results and 'revenue_impact_breakdown' in results:
         # This is handled in the time to fill section above
-        pass
-    elif 'solution_benefits_breakdown' in results:
-        # This is handled in the recruiting optimization section above
         pass
     
     # Export options for individual initiative
@@ -1729,15 +1580,25 @@ PARAMETERS USED
         st.info(f"💡 **Expected ROI Range:** {template['typical_roi']}")
         
     with col2:
-        # Special note for time to fill calculator
+        # Special notes for different calculators
         if initiative_key == 'time_to_fill_optimization':
             st.info("""
-            **💡 Time to Fill Benefits Include:**
+            **💡 Business Impact Analysis:**
+            
+            **Cost Savings:**
             • Productivity recovery (faster placement)
             • Overtime cost reduction  
             • Team productivity improvement
             • Faster new hire value realization
+            
+            **Revenue Protection:**
+            • Direct revenue from vacant positions
+            • Customer service impact mitigation
+            • Opportunity cost protection
+            • Market share protection
             """)
+        else:
+            st.info(f"💡 **Expected ROI Range:** {template['typical_roi']}")
 
 def display_overall_summary():
     """Display summary across all selected initiatives"""
