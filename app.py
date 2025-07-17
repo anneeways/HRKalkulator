@@ -106,7 +106,7 @@ INITIATIVE_TEMPLATES = {
     },
     'time_to_fill_optimization': {
         'name': "Time to Fill Optimization",
-        'description': "Reduce time to fill vacant positions through process improvements, technology, and recruiter training",
+        'description': "Reduce time to fill vacant positions through process improvements, technology, and recruiter training - includes both cost savings and revenue impact analysis",
         'annual_positions': 30,
         'current_time_to_fill': 60,
         'target_time_to_fill': 35,
@@ -117,7 +117,10 @@ INITIATIVE_TEMPLATES = {
         'optimization_investment': 45000,
         'training_costs': 15000,
         'technology_costs': 25000,
-        'typical_roi': "300-600%"
+        'revenue_generating_percentage': 60,  # NEW: % of roles that generate revenue
+        'revenue_per_employee_daily': 800,   # NEW: Daily revenue per employee
+        'customer_impact_factor': 25,        # NEW: % revenue loss due to service delays
+        'typical_roi': "400-800%"
     },
     'onboarding_excellence': {
         'name': "Structured Onboarding Program",
@@ -277,7 +280,7 @@ def calculate_recruiting_roi(params):
     }
 
 def calculate_time_to_fill_roi(params):
-    """Calculate Time to Fill Optimization ROI"""
+    """Calculate Time to Fill Optimization ROI with Revenue Impact Analysis"""
     annual_positions = params['annual_positions']
     current_days = params['current_time_to_fill']
     target_days = params['target_time_to_fill']
@@ -286,7 +289,7 @@ def calculate_time_to_fill_roi(params):
     avg_salary = params['avg_position_salary']
     daily_salary = avg_salary / 250
     
-    # Benefits calculation
+    # === COST SAVINGS ANALYSIS (Original) ===
     # 1. Productivity recovery
     productivity_loss_rate = params['productivity_loss_rate'] / 100
     productivity_recovery = annual_positions * days_saved * daily_salary * productivity_loss_rate
@@ -310,7 +313,45 @@ def calculate_time_to_fill_roi(params):
     # 4. Faster time to productivity
     faster_onboarding_value = annual_positions * (days_saved * 0.3) * daily_salary * 0.6
     
-    total_annual_benefits = productivity_recovery + overtime_savings + team_productivity_gain + faster_onboarding_value
+    total_cost_savings = productivity_recovery + overtime_savings + team_productivity_gain + faster_onboarding_value
+    
+    # === REVENUE IMPACT ANALYSIS (New) ===
+    revenue_generating_pct = params.get('revenue_generating_percentage', 60) / 100
+    revenue_per_employee_daily = params.get('revenue_per_employee_daily', 800)
+    customer_impact_factor = params.get('customer_impact_factor', 25) / 100
+    
+    # Revenue-generating positions
+    revenue_positions = annual_positions * revenue_generating_pct
+    
+    # 1. Direct revenue loss from vacant revenue-generating positions
+    direct_revenue_loss_prevented = revenue_positions * days_saved * revenue_per_employee_daily
+    
+    # 2. Customer service/satisfaction impact on remaining revenue
+    # When key positions are vacant, it affects service quality and customer retention
+    customer_impact_loss_prevented = (
+        annual_positions * days_saved * revenue_per_employee_daily * 
+        customer_impact_factor * params.get('customer_base_factor', 0.15)
+    )
+    
+    # 3. Lost opportunity costs (deals not closed, projects delayed)
+    opportunity_cost_factor = params.get('opportunity_cost_factor', 0.20)  # 20% of daily revenue
+    opportunity_loss_prevented = (
+        revenue_positions * days_saved * revenue_per_employee_daily * opportunity_cost_factor
+    )
+    
+    # 4. Market share protection (competitors don't gain ground)
+    market_share_protection = (
+        revenue_positions * days_saved * revenue_per_employee_daily * 
+        params.get('market_share_factor', 0.05)  # 5% market impact
+    )
+    
+    total_revenue_protection = (
+        direct_revenue_loss_prevented + customer_impact_loss_prevented + 
+        opportunity_loss_prevented + market_share_protection
+    )
+    
+    # === COMBINED BENEFITS ===
+    total_annual_benefits = total_cost_savings + total_revenue_protection
     
     # Investment costs
     total_investment = (
@@ -323,6 +364,12 @@ def calculate_time_to_fill_roi(params):
     roi = ((total_annual_benefits - total_investment) / total_investment * 100) if total_investment > 0 else 0
     payback_months = (total_investment / (total_annual_benefits / 12)) if total_annual_benefits > 0 else 0
     
+    # Calculate daily impact metrics
+    daily_revenue_at_risk = annual_positions * revenue_generating_pct * revenue_per_employee_daily
+    total_revenue_at_risk_current = daily_revenue_at_risk * current_days
+    total_revenue_at_risk_target = daily_revenue_at_risk * target_days
+    annual_revenue_at_risk_reduction = daily_revenue_at_risk * days_saved * annual_positions
+    
     return {
         'total_investment': total_investment,
         'annual_benefits': total_annual_benefits,
@@ -330,12 +377,32 @@ def calculate_time_to_fill_roi(params):
         'payback_months': payback_months,
         'days_saved_per_position': days_saved,
         'total_days_saved_annually': annual_positions * days_saved,
-        'benefit_breakdown': {
+        
+        # Cost savings breakdown
+        'cost_savings_breakdown': {
             'productivity_recovery': productivity_recovery,
             'overtime_savings': overtime_savings,
             'team_productivity_gain': team_productivity_gain,
             'faster_onboarding': faster_onboarding_value
         },
+        'total_cost_savings': total_cost_savings,
+        
+        # Revenue impact breakdown
+        'revenue_impact_breakdown': {
+            'direct_revenue_protection': direct_revenue_loss_prevented,
+            'customer_impact_protection': customer_impact_loss_prevented,
+            'opportunity_cost_protection': opportunity_loss_prevented,
+            'market_share_protection': market_share_protection
+        },
+        'total_revenue_protection': total_revenue_protection,
+        
+        # Revenue metrics
+        'daily_revenue_at_risk': daily_revenue_at_risk,
+        'revenue_positions': revenue_positions,
+        'total_revenue_at_risk_current': total_revenue_at_risk_current,
+        'total_revenue_at_risk_target': total_revenue_at_risk_target,
+        'annual_revenue_at_risk_reduction': annual_revenue_at_risk_reduction,
+        
         'investment_breakdown': {
             'optimization_investment': params['optimization_investment'],
             'training_costs': params.get('training_costs', 15000),
@@ -1102,7 +1169,7 @@ def display_initiative(initiative_key):
                 )
             
             with col2:
-                st.markdown("**📈 Impact Parameters**")
+                st.markdown("**📈 Cost Impact Parameters**")
                 params['productivity_loss_rate'] = st.slider(
                     "Productivity Loss During Vacancy (%)", 
                     0, 100, 
@@ -1125,6 +1192,30 @@ def display_initiative(initiative_key):
                     step=0.1,
                     help="Overtime pay rate (1.5 = time and a half)",
                     key=f"overtime_{initiative_key}"
+                )
+                
+                st.markdown("**💵 Revenue Impact Parameters**")
+                params['revenue_generating_percentage'] = st.slider(
+                    "Revenue-Generating Roles (%)", 
+                    0, 100, 
+                    int(params.get('revenue_generating_percentage', 60)),
+                    help="% of positions that directly generate revenue",
+                    key=f"revenue_pct_{initiative_key}"
+                )
+                params['revenue_per_employee_daily'] = st.number_input(
+                    "Daily Revenue per Employee ($)", 
+                    min_value=0, 
+                    value=params.get('revenue_per_employee_daily', 800),
+                    step=50,
+                    help="Average daily revenue generated per employee",
+                    key=f"daily_revenue_{initiative_key}"
+                )
+                params['customer_impact_factor'] = st.slider(
+                    "Customer Service Impact (%)", 
+                    0, 50, 
+                    int(params.get('customer_impact_factor', 25)),
+                    help="% revenue impact due to reduced service quality during vacancies",
+                    key=f"customer_impact_{initiative_key}"
                 )
                 
                 st.markdown("**⚙️ Advanced Settings**")
@@ -1283,6 +1374,7 @@ def display_initiative(initiative_key):
     
     # Special metrics for time to fill
     if initiative_key == 'time_to_fill_optimization':
+        # Time improvement metrics
         st.subheader("⏱️ Time to Fill Improvements")
         col1, col2, col3, col4 = st.columns(4)
         
@@ -1314,8 +1406,93 @@ def display_initiative(initiative_key):
                     "Payback Period",
                     f"{results['payback_months']:.1f} months"
                 )
-    
-    # Cost breakdown for leadership/coaching programs
+        
+        # Revenue at risk analysis
+        st.subheader("💰 Revenue at Risk Analysis")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                "Daily Revenue at Risk",
+                format_currency(results['daily_revenue_at_risk']),
+                help="Revenue at risk per day with current time to fill"
+            )
+        
+        with col2:
+            st.metric(
+                "Revenue-Generating Positions",
+                f"{results['revenue_positions']:.0f}",
+                delta=f"{params.get('revenue_generating_percentage', 60)}% of total"
+            )
+        
+        with col3:
+            st.metric(
+                "Annual Revenue Protection",
+                format_currency(results['total_revenue_protection']),
+                help="Revenue protected by faster time to fill"
+            )
+        
+        with col4:
+            revenue_risk_reduction = ((results['total_revenue_at_risk_current'] - results['total_revenue_at_risk_target']) / results['total_revenue_at_risk_current']) * 100 if results['total_revenue_at_risk_current'] > 0 else 0
+            st.metric(
+                "Revenue Risk Reduction",
+                f"{revenue_risk_reduction:.0f}%",
+                help="Reduction in revenue at risk per position"
+            )
+        
+        # Dual analysis breakdown
+        st.subheader("📊 Cost Savings vs Revenue Protection Analysis")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**💸 Cost Savings Breakdown**")
+            cost_breakdown_df = pd.DataFrame([
+                {"Category": "Productivity Recovery", "Annual Value": results['cost_savings_breakdown']['productivity_recovery']},
+                {"Category": "Overtime Reduction", "Annual Value": results['cost_savings_breakdown']['overtime_savings']},
+                {"Category": "Team Productivity", "Annual Value": results['cost_savings_breakdown']['team_productivity_gain']},
+                {"Category": "Faster Onboarding", "Annual Value": results['cost_savings_breakdown']['faster_onboarding']},
+            ])
+            cost_breakdown_df['Annual Value'] = cost_breakdown_df['Annual Value'].apply(format_currency)
+            st.dataframe(cost_breakdown_df, hide_index=True, use_container_width=True)
+            
+            st.metric("Total Cost Savings", format_currency(results['total_cost_savings']))
+        
+        with col2:
+            st.markdown("**💵 Revenue Protection Breakdown**")
+            revenue_breakdown_df = pd.DataFrame([
+                {"Category": "Direct Revenue Protection", "Annual Value": results['revenue_impact_breakdown']['direct_revenue_protection']},
+                {"Category": "Customer Service Impact", "Annual Value": results['revenue_impact_breakdown']['customer_impact_protection']},
+                {"Category": "Opportunity Cost Protection", "Annual Value": results['revenue_impact_breakdown']['opportunity_cost_protection']},
+                {"Category": "Market Share Protection", "Annual Value": results['revenue_impact_breakdown']['market_share_protection']},
+            ])
+            revenue_breakdown_df['Annual Value'] = revenue_breakdown_df['Annual Value'].apply(format_currency)
+            st.dataframe(revenue_breakdown_df, hide_index=True, use_container_width=True)
+            
+            st.metric("Total Revenue Protection", format_currency(results['total_revenue_protection']))
+        
+        # Combined chart
+        st.subheader("📈 Combined Benefits Analysis")
+        
+        # Create combined breakdown for chart
+        combined_benefits = {
+            **{f"Cost: {k}": v for k, v in results['cost_savings_breakdown'].items()},
+            **{f"Revenue: {k}": v for k, v in results['revenue_impact_breakdown'].items()}
+        }
+        
+        fig = px.bar(
+            x=list(combined_benefits.keys()),
+            y=list(combined_benefits.values()),
+            title="Time to Fill Optimization - Cost Savings vs Revenue Protection",
+            color=['Cost Savings'] * 4 + ['Revenue Protection'] * 4,
+            color_discrete_map={'Cost Savings': '#1f77b4', 'Revenue Protection': '#2ca02c'}
+        )
+        fig.update_layout(
+            xaxis_title="Benefit Category",
+            yaxis_title="Annual Value ($)",
+            xaxis_tickangle=-45,
+            showlegend=True
+        )
+        st.plotly_chart(fig, use_container_width=True)
     if initiative_key in ['leadership_development', 'executive_coaching'] and 'cost_breakdown' in results:
         col1, col2 = st.columns(2)
         
@@ -1379,6 +1556,9 @@ def display_initiative(initiative_key):
             showlegend=False
         )
         st.plotly_chart(fig, use_container_width=True)
+    elif 'cost_savings_breakdown' in results and 'revenue_impact_breakdown' in results:
+        # This is handled in the time to fill section above
+        pass
     
     # Export options for individual initiative
     st.divider()
