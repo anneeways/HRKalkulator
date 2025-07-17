@@ -1533,8 +1533,8 @@ def display_initiative(initiative_key):
             )
         
         with col3:
-            current_time = params['current_time_to_fill']
-            target_time = params['target_time_to_fill']
+            current_time = params.get('current_time_to_hire', 45)
+            target_time = params.get('target_time_to_fill', 35)
             improvement_pct = ((current_time - target_time) / current_time) * 100
             st.metric(
                 "Time Reduction",
@@ -1563,7 +1563,7 @@ def display_initiative(initiative_key):
         with col2:
             st.metric(
                 "Revenue-Generating Positions",
-                f"{results['revenue_positions']:.0f}",
+                f"{results.get('revenue_positions', 0):.0f}",
                 delta=f"{params.get('revenue_generating_percentage', 60)}% of total"
             )
         
@@ -1575,7 +1575,9 @@ def display_initiative(initiative_key):
             )
         
         with col4:
-            revenue_risk_reduction = ((results['total_revenue_at_risk_current'] - results['total_revenue_at_risk_target']) / results['total_revenue_at_risk_current']) * 100 if results['total_revenue_at_risk_current'] > 0 else 0
+            current_revenue_risk = results.get('total_revenue_at_risk_current', 1)
+            target_revenue_risk = results.get('total_revenue_at_risk_target', 0)
+            revenue_risk_reduction = ((current_revenue_risk - target_revenue_risk) / current_revenue_risk) * 100 if current_revenue_risk > 0 else 0
             st.metric(
                 "Revenue Risk Reduction",
                 f"{revenue_risk_reduction:.0f}%",
@@ -1684,7 +1686,7 @@ def display_initiative(initiative_key):
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            current_time = params['current_time_to_hire']
+            current_time = params.get('current_time_to_hire', 45)
             new_time = results['improved_metrics']['new_time_to_hire']
             st.metric(
                 "Time to Hire",
@@ -1693,7 +1695,7 @@ def display_initiative(initiative_key):
             )
         
         with col2:
-            current_cost = params['current_cost_per_hire']
+            current_cost = params.get('current_cost_per_hire', 5000)
             new_cost = results['improved_metrics']['new_cost_per_hire']
             st.metric(
                 "Cost per Hire",
@@ -1711,7 +1713,7 @@ def display_initiative(initiative_key):
             )
         
         with col4:
-            agency_savings = results['improved_metrics']['agency_spend_reduction']
+            agency_savings = results['improved_metrics'].get('agency_spend_reduction', 0)
             st.metric(
                 "Annual Agency Savings",
                 format_currency(agency_savings)
