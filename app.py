@@ -334,6 +334,9 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
     styles = getSampleStyleSheet()
     story = []
     
+    # Check if single initiative
+    is_single_initiative = len(initiative_results) == 1
+    
     # Title
     title_style = ParagraphStyle(
         'CustomTitle',
@@ -342,21 +345,37 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
         spaceAfter=30,
         textColor=colors.darkblue
     )
-    story.append(Paragraph("HR ROI Calculator - Comprehensive Report", title_style))
+    
+    if is_single_initiative:
+        story.append(Paragraph(f"HR ROI Analysis - {initiative_results[0]['Initiative']}", title_style))
+    else:
+        story.append(Paragraph("HR ROI Calculator - Portfolio Report", title_style))
+    
     story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal']))
     story.append(Paragraph("Note: ROI calculated using incremental costs vs. incremental benefits", styles['Italic']))
     story.append(Spacer(1, 20))
     
     # Executive Summary
-    story.append(Paragraph("Executive Summary", styles['Heading2']))
-    
-    summary_data = [
-        ['Metric', 'Value', 'Status'],
-        ['Portfolio ROI', f"{overall_roi:.0f}%", get_roi_status(overall_roi)],
-        ['Total Investment', format_currency(total_investment), ''],
-        ['Total Annual Benefits', format_currency(total_benefits), ''],
-        ['Net Annual Benefit', format_currency(total_benefits - total_investment), '']
-    ]
+    if is_single_initiative:
+        story.append(Paragraph("Executive Summary", styles['Heading2']))
+        
+        summary_data = [
+            ['Metric', 'Value', 'Status'],
+            ['Initiative ROI', f"{overall_roi:.0f}%", get_roi_status(overall_roi)],
+            ['Total Investment', format_currency(total_investment), ''],
+            ['Total Annual Benefits', format_currency(total_benefits), ''],
+            ['Net Annual Benefit', format_currency(total_benefits - total_investment), '']
+        ]
+    else:
+        story.append(Paragraph("Executive Summary", styles['Heading2']))
+        
+        summary_data = [
+            ['Metric', 'Value', 'Status'],
+            ['Portfolio ROI', f"{overall_roi:.0f}%", get_roi_status(overall_roi)],
+            ['Total Investment', format_currency(total_investment), ''],
+            ['Total Annual Benefits', format_currency(total_benefits), ''],
+            ['Net Annual Benefit', format_currency(total_benefits - total_investment), '']
+        ]
     
     summary_table = Table(summary_data, colWidths=[2*inch, 1.5*inch, 2*inch])
     summary_table.setStyle(TableStyle([
@@ -406,51 +425,86 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
     # Recommendations
     story.append(Paragraph("Strategic Recommendations", styles['Heading2']))
     
-    if overall_roi >= 400:
-        recommendation = "✅ Exceptional portfolio performance. Proceed with full implementation across all initiatives. Consider scaling successful programs and expanding to additional employee populations."
-    elif overall_roi >= 200:
-        recommendation = "✅ Strong portfolio performance. Proceed with implementation, prioritizing highest ROI initiatives first. Monitor key metrics closely during rollout."
-    elif overall_roi >= 100:
-        recommendation = "⚠️ Moderate portfolio performance. Focus on highest ROI initiatives for immediate implementation. Review and optimize lower-performing programs before proceeding."
+    if is_single_initiative:
+        if overall_roi >= 400:
+            recommendation = "✅ Exceptional ROI performance. Proceed with immediate implementation. Consider scaling this program to additional employee populations and similar roles."
+        elif overall_roi >= 200:
+            recommendation = "✅ Strong ROI performance. Proceed with implementation. Monitor key metrics closely and prepare for potential expansion."
+        elif overall_roi >= 100:
+            recommendation = "⚠️ Moderate ROI performance. Proceed with implementation but consider optimizing program design or targeting higher-impact participants."
+        else:
+            recommendation = "❌ Initiative requires optimization. Review assumptions, implementation strategy, and target population before proceeding."
     else:
-        recommendation = "❌ Portfolio requires significant optimization. Focus resources on highest ROI initiatives only. Reassess assumptions and implementation strategies for underperforming programs."
+        if overall_roi >= 400:
+            recommendation = "✅ Exceptional portfolio performance. Proceed with full implementation across all initiatives. Consider scaling successful programs and expanding to additional employee populations."
+        elif overall_roi >= 200:
+            recommendation = "✅ Strong portfolio performance. Proceed with implementation, prioritizing highest ROI initiatives first. Monitor key metrics closely during rollout."
+        elif overall_roi >= 100:
+            recommendation = "⚠️ Moderate portfolio performance. Focus on highest ROI initiatives for immediate implementation. Review and optimize lower-performing programs before proceeding."
+        else:
+            recommendation = "❌ Portfolio requires significant optimization. Focus resources on highest ROI initiatives only. Reassess assumptions and implementation strategies for underperforming programs."
     
     story.append(Paragraph(recommendation, styles['Normal']))
     story.append(Spacer(1, 20))
     
-    # Implementation Priority
-    story.append(Paragraph("Implementation Priority Matrix", styles['Heading3']))
-    sorted_initiatives = sorted(initiative_results, key=lambda x: x['ROI (%)'], reverse=True)
-    
-    priority_data = [['Priority', 'Initiative', 'ROI', 'Recommendation']]
-    for i, init in enumerate(sorted_initiatives):
-        if init['ROI (%)'] >= 300:
-            priority = "Phase 1 (Immediate)"
-        elif init['ROI (%)'] >= 150:
-            priority = "Phase 2 (3-6 months)"
-        else:
-            priority = "Phase 3 (Review)"
+    # Implementation Priority (only for multiple initiatives)
+    if not is_single_initiative:
+        story.append(Paragraph("Implementation Priority Matrix", styles['Heading3']))
+        sorted_initiatives = sorted(initiative_results, key=lambda x: x['ROI (%)'], reverse=True)
         
-        priority_data.append([
-            priority,
-            init['Initiative'],
-            f"{init['ROI (%)']:.0f}%",
-            "Implement" if init['ROI (%)'] >= 150 else "Optimize"
-        ])
-    
-    priority_table = Table(priority_data, colWidths=[1.5*inch, 2.5*inch, 1*inch, 1*inch])
-    priority_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.lightblue),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    story.append(priority_table)
+        priority_data = [['Priority', 'Initiative', 'ROI', 'Recommendation']]
+        for i, init in enumerate(sorted_initiatives):
+            if init['ROI (%)'] >= 300:
+                priority = "Phase 1 (Immediate)"
+            elif init['ROI (%)'] >= 150:
+                priority = "Phase 2 (3-6 months)"
+            else:
+                priority = "Phase 3 (Review)"
+            
+            priority_data.append([
+                priority,
+                init['Initiative'],
+                f"{init['ROI (%)']:.0f}%",
+                "Implement" if init['ROI (%)'] >= 150 else "Optimize"
+            ])
+        
+        priority_table = Table(priority_data, colWidths=[1.5*inch, 2.5*inch, 1*inch, 1*inch])
+        priority_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.lightblue),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        story.append(priority_table)
+    else:
+        # For single initiatives, add specific implementation guidance
+        story.append(Paragraph("Implementation Guidance", styles['Heading3']))
+        
+        if overall_roi >= 200:
+            implementation_guidance = """Recommended Implementation Steps:
+
+1. Secure executive sponsorship and budget approval
+2. Develop detailed project plan with clear timelines
+3. Establish baseline metrics for measurement
+4. Launch pilot program with key stakeholders
+5. Monitor progress and adjust as needed
+6. Plan for scaling based on results"""
+        else:
+            implementation_guidance = """Before Implementation:
+
+1. Review and validate assumptions with stakeholders
+2. Consider optimizing program design or targeting
+3. Establish clear success criteria and measurement plan
+4. Start with a smaller pilot to test effectiveness
+5. Gather additional data to strengthen business case"""
+        
+        story.append(Paragraph(implementation_guidance, styles['Normal']))
+        story.append(Spacer(1, 20))
     
     doc.build(story)
     buffer.seek(0)
@@ -1049,12 +1103,14 @@ def display_initiative(initiative_key):
         )
         st.plotly_chart(fig, use_container_width=True)
     
-    # Quick export for individual initiative
+    # Export options for individual initiative
     st.divider()
+    st.subheader("📄 Export Options")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
+    
     with col1:
-        if st.button(f"📋 Export {template['name']} Summary", key=f"export_text_{initiative_key}"):
+        if st.button(f"📋 Text Summary", key=f"export_text_{initiative_key}"):
             individual_report = f"""
 {template['name']} - ROI Analysis
 Generated: {datetime.now().strftime('%B %d, %Y')}
@@ -1078,7 +1134,7 @@ PARAMETERS USED
                     individual_report += f"{key.replace('_', ' ').title()}: {value}\n"
             
             st.download_button(
-                label="📥 Download Summary",
+                label="📥 Download Text",
                 data=individual_report,
                 file_name=f"{initiative_key}_roi_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                 mime="text/plain",
@@ -1086,7 +1142,63 @@ PARAMETERS USED
             )
     
     with col2:
-        st.info(f"💡 **Expected ROI Range:** {template['typical_roi']}")
+        if REPORTLAB_AVAILABLE:
+            if st.button(f"📄 PDF Report", key=f"export_pdf_{initiative_key}"):
+                # Create single initiative data structure for PDF
+                investment = results.get('total_investment', results.get('total_costs', 0))
+                benefits = results.get('annual_benefits', results.get('annual_savings', 0))
+                
+                single_initiative_data = [{
+                    'Initiative': template['name'],
+                    'Investment': investment,
+                    'Annual Benefits': benefits,
+                    'ROI (%)': results['roi']
+                }]
+                
+                pdf_buffer = create_pdf_report(
+                    single_initiative_data, 
+                    results['roi'], 
+                    investment, 
+                    benefits, 
+                    {initiative_key: params}
+                )
+                if pdf_buffer:
+                    st.download_button(
+                        label="📥 Download PDF",
+                        data=pdf_buffer,
+                        file_name=f"{initiative_key}_roi_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        key=f"download_pdf_{initiative_key}"
+                    )
+        else:
+            st.button(f"📄 PDF Report", disabled=True, help="Install reportlab to enable PDF export")
+    
+    with col3:
+        if st.button(f"📊 JSON Data", key=f"export_json_{initiative_key}"):
+            investment = results.get('total_investment', results.get('total_costs', 0))
+            benefits = results.get('annual_benefits', results.get('annual_savings', 0))
+            
+            export_data = {
+                'methodology': 'incremental_cost_accounting',
+                'initiative': {
+                    'name': template['name'],
+                    'investment': investment,
+                    'annual_benefits': benefits,
+                    'roi': results['roi'],
+                    'results': results
+                },
+                'parameters': params,
+                'timestamp': datetime.now().isoformat()
+            }
+            st.download_button(
+                label="📥 Download JSON",
+                data=json.dumps(export_data, indent=2, default=str),
+                file_name=f"{initiative_key}_roi_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                key=f"download_json_{initiative_key}"
+            )
+    
+    st.info(f"💡 **Expected ROI Range:** {template['typical_roi']}")
 
 def display_overall_summary():
     """Display summary across all selected initiatives"""
