@@ -69,10 +69,11 @@ INITIATIVE_TEMPLATES = {
         'facilitator_costs': 80000,
         'materials_costs': 20000,
         'venue_costs': 30000,
+        'travel_costs': 20000,
         'productivity_gain': 18,
         'retention_improvement': 30,
         'team_performance_gain': 15,
-        'typical_roi': "250-400%"
+        'typical_roi': "400-800%"  # Updated to reflect incremental-only calculation
     },
     'executive_coaching': {
         'name': "Executive Coaching Initiative", 
@@ -83,10 +84,11 @@ INITIATIVE_TEMPLATES = {
         'facilitator_costs': 120000,
         'materials_costs': 5000,
         'venue_costs': 0,
+        'travel_costs': 5000,
         'productivity_gain': 25,
         'retention_improvement': 40,
         'team_performance_gain': 20,
-        'typical_roi': "300-500%"
+        'typical_roi': "500-1000%"  # Updated to reflect incremental-only calculation
     },
     'recruiting_optimization': {
         'name': "Recruiting Process Optimization",
@@ -141,34 +143,27 @@ def format_currency(amount):
 
 def get_roi_status(roi):
     """Get status and color for ROI"""
-    if roi >= 300:
-        return "🟢 Excellent (300%+)"
+    if roi >= 400:
+        return "🟢 Excellent (400%+)"
     elif roi >= 200:
-        return "🟡 Good (200-299%)"
+        return "🟡 Good (200-399%)"
     elif roi >= 100:
         return "🟠 Moderate (100-199%)"
     else:
         return "🔴 Needs Review (<100%)"
 
 def calculate_leadership_roi(params):
-    """Calculate Leadership Development ROI"""
-    # Costs
-    participant_time_cost = (
-        params['participants'] * 
-        (params['avg_salary'] * 1.3 / 12) * 
-        (params.get('time_commitment', 20) / 160) * 
-        params['program_duration']
-    )
+    """Calculate Leadership Development ROI - FIXED VERSION using only incremental costs"""
     
-    total_costs = (
+    # ONLY TRUE INCREMENTAL COSTS (no salary/opportunity costs)
+    total_incremental_costs = (
         params['facilitator_costs'] + 
         params['materials_costs'] + 
         params['venue_costs'] + 
-        params.get('travel_costs', 20000) +
-        participant_time_cost
+        params.get('travel_costs', 20000)
     )
     
-    # Annual Benefits
+    # INCREMENTAL BENEFITS (annual value above baseline)
     productivity_benefit = params['participants'] * params['avg_salary'] * (params['productivity_gain'] / 100)
     
     current_turnover = params.get('current_turnover', 18)
@@ -188,18 +183,25 @@ def calculate_leadership_roi(params):
     total_annual_benefits = productivity_benefit + retention_savings + team_benefit
     
     # Calculate ROI
-    roi = ((total_annual_benefits - total_costs) / total_costs * 100) if total_costs > 0 else 0
-    payback_months = (total_costs / (total_annual_benefits / 12)) if total_annual_benefits > 0 else 0
+    roi = ((total_annual_benefits - total_incremental_costs) / total_incremental_costs * 100) if total_incremental_costs > 0 else 0
+    payback_months = (total_incremental_costs / (total_annual_benefits / 12)) if total_annual_benefits > 0 else 0
     
     return {
-        'total_costs': total_costs,
+        'total_costs': total_incremental_costs,
         'annual_benefits': total_annual_benefits,
         'roi': roi,
         'payback_months': payback_months,
+        'net_annual_benefit': total_annual_benefits - total_incremental_costs,
         'benefit_breakdown': {
             'productivity': productivity_benefit,
             'retention': retention_savings,
             'team_performance': team_benefit
+        },
+        'cost_breakdown': {
+            'facilitator_costs': params['facilitator_costs'],
+            'materials_costs': params['materials_costs'],
+            'venue_costs': params['venue_costs'],
+            'travel_costs': params.get('travel_costs', 20000)
         }
     }
 
@@ -342,6 +344,7 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
     )
     story.append(Paragraph("HR ROI Calculator - Comprehensive Report", title_style))
     story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal']))
+    story.append(Paragraph("Note: ROI calculated using incremental costs vs. incremental benefits", styles['Italic']))
     story.append(Spacer(1, 20))
     
     # Executive Summary
@@ -394,15 +397,23 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
         story.append(init_table)
         story.append(Spacer(1, 12))
     
+    # Methodology Note
+    story.append(Paragraph("Methodology Note", styles['Heading2']))
+    methodology_text = """This analysis uses incremental cost accounting, where only true additional expenses are counted as costs (e.g., facilitator fees, materials, venues). Employee salary costs are not included since employees are paid regardless of training participation. This approach provides a more accurate view of the actual investment required and expected returns."""
+    story.append(Paragraph(methodology_text, styles['Normal']))
+    story.append(Spacer(1, 20))
+    
     # Recommendations
     story.append(Paragraph("Strategic Recommendations", styles['Heading2']))
     
-    if overall_roi >= 200:
-        recommendation = "✅ Strong portfolio performance. Proceed with full implementation across all initiatives. Focus on scaling successful programs and monitoring key metrics."
+    if overall_roi >= 400:
+        recommendation = "✅ Exceptional portfolio performance. Proceed with full implementation across all initiatives. Consider scaling successful programs and expanding to additional employee populations."
+    elif overall_roi >= 200:
+        recommendation = "✅ Strong portfolio performance. Proceed with implementation, prioritizing highest ROI initiatives first. Monitor key metrics closely during rollout."
     elif overall_roi >= 100:
-        recommendation = "⚠️ Moderate portfolio performance. Prioritize highest ROI initiatives for immediate implementation. Review and optimize lower-performing programs."
+        recommendation = "⚠️ Moderate portfolio performance. Focus on highest ROI initiatives for immediate implementation. Review and optimize lower-performing programs before proceeding."
     else:
-        recommendation = "❌ Portfolio requires optimization. Focus resources on highest ROI initiatives only. Reassess assumptions and implementation strategies for underperforming programs."
+        recommendation = "❌ Portfolio requires significant optimization. Focus resources on highest ROI initiatives only. Reassess assumptions and implementation strategies for underperforming programs."
     
     story.append(Paragraph(recommendation, styles['Normal']))
     story.append(Spacer(1, 20))
@@ -413,9 +424,9 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
     
     priority_data = [['Priority', 'Initiative', 'ROI', 'Recommendation']]
     for i, init in enumerate(sorted_initiatives):
-        if init['ROI (%)'] >= 200:
+        if init['ROI (%)'] >= 300:
             priority = "Phase 1 (Immediate)"
-        elif init['ROI (%)'] >= 100:
+        elif init['ROI (%)'] >= 150:
             priority = "Phase 2 (3-6 months)"
         else:
             priority = "Phase 3 (Review)"
@@ -424,7 +435,7 @@ def create_pdf_report(initiative_results, overall_roi, total_investment, total_b
             priority,
             init['Initiative'],
             f"{init['ROI (%)']:.0f}%",
-            "Implement" if init['ROI (%)'] >= 100 else "Optimize"
+            "Implement" if init['ROI (%)'] >= 150 else "Optimize"
         ])
     
     priority_table = Table(priority_data, colWidths=[1.5*inch, 2.5*inch, 1*inch, 1*inch])
@@ -459,7 +470,7 @@ def create_powerpoint_presentation(initiative_results, overall_roi, total_invest
     subtitle = slide.placeholders[1]
     
     title.text = "HR ROI Calculator Results"
-    subtitle.text = f"Portfolio Analysis\nGenerated: {datetime.now().strftime('%B %d, %Y')}"
+    subtitle.text = f"Portfolio Analysis (Incremental Cost Method)\nGenerated: {datetime.now().strftime('%B %d, %Y')}"
     
     # Slide 2: Executive Summary
     slide_layout = prs.slide_layouts[1]  # Title and content layout
@@ -477,6 +488,8 @@ def create_powerpoint_presentation(initiative_results, overall_roi, total_invest
 • Net Annual Benefit: {format_currency(total_benefits - total_investment)}
 
 Status: {get_roi_status(overall_roi)}
+
+Note: Analysis uses incremental cost accounting methodology
 """
     
     content.text = summary_text
@@ -494,14 +507,38 @@ Status: {get_roi_status(overall_roi)}
     
     comparison_text = "Initiative Rankings:\n\n"
     for i, init in enumerate(sorted_initiatives):
-        status_emoji = "🟢" if init['ROI (%)'] >= 200 else "🟡" if init['ROI (%)'] >= 100 else "🔴"
+        status_emoji = "🟢" if init['ROI (%)'] >= 400 else "🟡" if init['ROI (%)'] >= 200 else "🔴"
         comparison_text += f"{i+1}. {init['Initiative']}\n"
         comparison_text += f"   ROI: {init['ROI (%)']:.0f}% {status_emoji}\n"
         comparison_text += f"   Investment: {format_currency(init['Investment'])}\n\n"
     
     content.text = comparison_text
     
-    # Slide 4: Implementation Roadmap
+    # Slide 4: Methodology
+    slide_layout = prs.slide_layouts[1]
+    slide = prs.slides.add_slide(slide_layout)
+    title = slide.shapes.title
+    content = slide.placeholders[1]
+    
+    title.text = "Methodology: Incremental Cost Accounting"
+    
+    methodology_text = """Key Principles:
+
+• Costs: Only true incremental expenses counted
+  - Facilitator fees, materials, venues, travel
+  - Employee salaries excluded (paid regardless)
+
+• Benefits: Incremental value above baseline
+  - Productivity improvements
+  - Retention savings
+  - Team performance gains
+
+• Result: More accurate ROI reflecting actual investment
+  vs. expected returns"""
+    
+    content.text = methodology_text
+    
+    # Slide 5: Implementation Roadmap
     slide_layout = prs.slide_layouts[1]
     slide = prs.slides.add_slide(slide_layout)
     title = slide.shapes.title
@@ -510,12 +547,12 @@ Status: {get_roi_status(overall_roi)}
     title.text = "Implementation Roadmap"
     
     roadmap_text = """Phase 1 (Immediate - 0-3 months):
-• Launch initiatives with ROI ≥ 200%
+• Launch initiatives with ROI ≥ 300%
 • Secure executive sponsorship
 • Establish measurement frameworks
 
 Phase 2 (Short-term - 3-6 months):
-• Implement initiatives with ROI 100-199%
+• Implement initiatives with ROI 150-299%
 • Monitor Phase 1 results
 • Adjust programs based on early feedback
 
@@ -526,7 +563,7 @@ Phase 3 (Long-term - 6+ months):
     
     content.text = roadmap_text
     
-    # Slide 5: Key Success Factors
+    # Slide 6: Key Success Factors
     slide_layout = prs.slide_layouts[1]
     slide = prs.slides.add_slide(slide_layout)
     title = slide.shapes.title
@@ -567,10 +604,24 @@ def main():
                 padding: 2rem; border-radius: 10px; margin-bottom: 2rem;'>
         <h1 style='color: white; margin: 0; font-size: 2.5rem;'>🎯 HR ROI Calculator</h1>
         <p style='color: rgba(255,255,255,0.8); margin: 0.5rem 0 0 0; font-size: 1.2rem;'>
-            Calculate ROI for Individual HR Initiatives
+            Calculate ROI for Individual HR Initiatives (Using Incremental Cost Method)
         </p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Methodology explanation
+    with st.expander("📊 About Our ROI Methodology", expanded=False):
+        st.markdown("""
+        **Incremental Cost Accounting Approach:**
+        
+        - **Costs**: Only true incremental expenses (facilitator fees, materials, venues, travel)
+        - **Benefits**: Incremental value above baseline performance
+        - **Excluded**: Employee salary costs (paid regardless of training participation)
+        
+        This approach provides a more accurate view of the actual investment required and expected returns,
+        avoiding the "apples to oranges" comparison of treating salaries as costs while calculating productivity 
+        gains as benefits.
+        """)
     
     # Show export capabilities
     col1, col2, col3 = st.columns(3)
@@ -683,6 +734,7 @@ def display_initiative(initiative_key):
         # Update parameters based on initiative type
         if initiative_key == 'leadership_development' or initiative_key == 'executive_coaching':
             with col1:
+                st.markdown("**📊 Program Parameters**")
                 params['participants'] = st.number_input(
                     "Number of Participants", 
                     min_value=1, 
@@ -702,25 +754,75 @@ def display_initiative(initiative_key):
                     value=params['program_duration'],
                     key=f"duration_{initiative_key}"
                 )
+                
+                st.markdown("**💰 Direct Costs**")
+                params['facilitator_costs'] = st.number_input(
+                    "Facilitator Costs ($)", 
+                    min_value=0, 
+                    value=params['facilitator_costs'], 
+                    step=5000,
+                    key=f"facilitator_{initiative_key}"
+                )
+                params['materials_costs'] = st.number_input(
+                    "Materials Costs ($)", 
+                    min_value=0, 
+                    value=params['materials_costs'], 
+                    step=1000,
+                    key=f"materials_{initiative_key}"
+                )
+                params['venue_costs'] = st.number_input(
+                    "Venue Costs ($)", 
+                    min_value=0, 
+                    value=params['venue_costs'], 
+                    step=1000,
+                    key=f"venue_{initiative_key}"
+                )
+                params['travel_costs'] = st.number_input(
+                    "Travel Costs ($)", 
+                    min_value=0, 
+                    value=params.get('travel_costs', 20000), 
+                    step=1000,
+                    key=f"travel_{initiative_key}"
+                )
             
             with col2:
+                st.markdown("**📈 Expected Improvements**")
                 params['productivity_gain'] = st.slider(
                     "Productivity Improvement (%)", 
                     0, 50, 
                     params['productivity_gain'],
+                    help="Expected increase in individual productivity",
                     key=f"productivity_{initiative_key}"
                 )
                 params['retention_improvement'] = st.slider(
                     "Retention Improvement (%)", 
                     0, 50, 
                     params['retention_improvement'],
+                    help="Reduction in turnover rate for participants",
                     key=f"retention_{initiative_key}"
                 )
                 params['team_performance_gain'] = st.slider(
                     "Team Performance Gain (%)", 
                     0, 30, 
                     params['team_performance_gain'],
+                    help="Improvement in team performance led by participants",
                     key=f"team_{initiative_key}"
+                )
+                
+                st.markdown("**⚙️ Advanced Settings**")
+                params['current_turnover'] = st.number_input(
+                    "Current Turnover Rate (%)", 
+                    min_value=0.0, 
+                    max_value=50.0,
+                    value=params.get('current_turnover', 18.0), 
+                    step=1.0,
+                    key=f"turnover_{initiative_key}"
+                )
+                params['team_size'] = st.number_input(
+                    "Average Team Size", 
+                    min_value=1, 
+                    value=params.get('team_size', 8),
+                    key=f"teamsize_{initiative_key}"
                 )
             
             # Calculate and display results
@@ -881,7 +983,7 @@ def display_initiative(initiative_key):
     with col2:
         investment_key = 'total_investment' if 'total_investment' in results else 'total_costs'
         st.metric(
-            "Total Investment",
+            "Incremental Investment",
             format_currency(results[investment_key])
         )
     
@@ -905,6 +1007,30 @@ def display_initiative(initiative_key):
                 format_currency(net_benefit)
             )
     
+    # Cost breakdown for leadership/coaching programs
+    if initiative_key in ['leadership_development', 'executive_coaching'] and 'cost_breakdown' in results:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("💰 Cost Breakdown")
+            cost_breakdown = results['cost_breakdown']
+            cost_df = pd.DataFrame([
+                {"Cost Category": "Facilitator", "Amount": cost_breakdown['facilitator_costs']},
+                {"Cost Category": "Materials", "Amount": cost_breakdown['materials_costs']},
+                {"Cost Category": "Venue", "Amount": cost_breakdown['venue_costs']},
+                {"Cost Category": "Travel", "Amount": cost_breakdown['travel_costs']},
+            ])
+            st.dataframe(cost_df, hide_index=True)
+            
+        with col2:
+            # Cost pie chart
+            fig_cost = px.pie(
+                values=list(cost_breakdown.values()),
+                names=list(cost_breakdown.keys()),
+                title="Investment Breakdown"
+            )
+            st.plotly_chart(fig_cost, use_container_width=True)
+    
     # Benefits breakdown chart
     if 'benefit_breakdown' in results:
         breakdown = results['benefit_breakdown']
@@ -912,7 +1038,7 @@ def display_initiative(initiative_key):
         fig = px.bar(
             x=list(breakdown.keys()),
             y=list(breakdown.values()),
-            title=f"{template['name']} - Benefits Breakdown",
+            title=f"{template['name']} - Annual Benefits Breakdown",
             color=list(breakdown.values()),
             color_continuous_scale="Viridis"
         )
@@ -932,12 +1058,14 @@ def display_initiative(initiative_key):
             individual_report = f"""
 {template['name']} - ROI Analysis
 Generated: {datetime.now().strftime('%B %d, %Y')}
+Methodology: Incremental Cost Accounting
 
 RESULTS SUMMARY
 ===============
 ROI: {results['roi']:.0f}%
-Investment: {format_currency(results.get('total_investment', results.get('total_costs', 0)))}
+Incremental Investment: {format_currency(results.get('total_investment', results.get('total_costs', 0)))}
 Annual Benefits: {format_currency(results.get('annual_benefits', results.get('annual_savings', 0)))}
+Net Annual Benefit: {format_currency(results.get('net_annual_benefit', results.get('annual_benefits', results.get('annual_savings', 0)) - results.get('total_investment', results.get('total_costs', 0))))}
 Status: {get_roi_status(results['roi'])}
 
 PARAMETERS USED
@@ -958,7 +1086,7 @@ PARAMETERS USED
             )
     
     with col2:
-        st.info(f"💡 **Typical ROI Range:** {template['typical_roi']}")
+        st.info(f"💡 **Expected ROI Range:** {template['typical_roi']}")
 
 def display_overall_summary():
     """Display summary across all selected initiatives"""
@@ -1011,7 +1139,7 @@ def display_overall_summary():
         st.metric("Portfolio ROI", f"{overall_roi:.0f}%", delta=get_roi_status(overall_roi))
     
     with col2:
-        st.metric("Total Investment", format_currency(total_investment))
+        st.metric("Total Incremental Investment", format_currency(total_investment))
     
     with col3:
         st.metric("Total Annual Benefits", format_currency(total_benefits))
@@ -1027,7 +1155,12 @@ def display_overall_summary():
     
     with col1:
         st.subheader("📊 Initiative Comparison")
-        st.dataframe(df, use_container_width=True)
+        # Format the dataframe for better display
+        display_df = df.copy()
+        display_df['Investment'] = display_df['Investment'].apply(format_currency)
+        display_df['Annual Benefits'] = display_df['Annual Benefits'].apply(format_currency)
+        display_df['ROI (%)'] = display_df['ROI (%)'].apply(lambda x: f"{x:.0f}%")
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
     
     with col2:
         fig = px.bar(
@@ -1088,6 +1221,7 @@ def display_overall_summary():
     with col4:
         if st.button("📊 JSON Data", type="secondary"):
             export_data = {
+                'methodology': 'incremental_cost_accounting',
                 'initiatives': initiative_results,
                 'summary': {
                     'total_investment': total_investment,
@@ -1107,13 +1241,20 @@ def display_overall_summary():
 def create_summary_report(initiative_results, overall_roi, total_investment, total_benefits):
     """Create a summary report"""
     report = f"""
-HR ROI CALCULATOR - SUMMARY REPORT
+HR ROI CALCULATOR - SUMMARY REPORT (INCREMENTAL COST METHOD)
 Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+
+METHODOLOGY
+===========
+This analysis uses incremental cost accounting:
+- Costs: Only true additional expenses (facilitator, materials, venues, travel)
+- Benefits: Incremental value above baseline performance  
+- Excluded: Employee salary costs (paid regardless of training participation)
 
 EXECUTIVE SUMMARY
 ================
 Portfolio ROI: {overall_roi:.0f}%
-Total Investment: {format_currency(total_investment)}
+Total Incremental Investment: {format_currency(total_investment)}
 Total Annual Benefits: {format_currency(total_benefits)}
 Net Annual Benefit: {format_currency(total_benefits - total_investment)}
 
@@ -1126,7 +1267,7 @@ INITIATIVE BREAKDOWN
     for initiative in initiative_results:
         report += f"""
 {initiative['Initiative']}:
-  Investment: {format_currency(initiative['Investment'])}
+  Incremental Investment: {format_currency(initiative['Investment'])}
   Annual Benefits: {format_currency(initiative['Annual Benefits'])}
   ROI: {initiative['ROI (%)']:.0f}%
 """
@@ -1135,9 +1276,9 @@ INITIATIVE BREAKDOWN
 
 RECOMMENDATIONS
 ===============
-{"✅ Strong portfolio - proceed with implementation" if overall_roi >= 200 else "⚠️ Review high-performing initiatives for priority implementation" if overall_roi >= 100 else "❌ Reassess assumptions and focus on highest ROI initiatives"}
+{"✅ Exceptional portfolio - proceed with full implementation" if overall_roi >= 400 else "✅ Strong portfolio - proceed with implementation, prioritize by ROI" if overall_roi >= 200 else "⚠️ Review highest-performing initiatives for priority implementation" if overall_roi >= 100 else "❌ Reassess assumptions and focus on highest ROI initiatives only"}
 
-Generated by HR ROI Calculator
+Generated by HR ROI Calculator (Incremental Cost Method)
 """
     
     return report
