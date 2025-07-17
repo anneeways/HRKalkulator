@@ -1,83 +1,4 @@
-def calculate_time_to_fill_roi(params):
-    """Calculate Time to Fill Optimization ROI"""
-    annual_positions = params['annual_positions']
-    current_days = params['current_time_to_fill']
-    target_days = params['target_time_to_fill']
-    days_saved = current_days - target_days
-    
-    avg_salary = params['avg_position_salary']
-    daily_salary = avg_salary / 250  # ~250 working days per year
-    
-    # Benefits calculation
-    # 1. Productivity recovery - get productive employees faster
-    productivity_loss_rate = params['productivity_loss_rate'] / 100
-    productivity_recovery = annual_positions * days_saved * daily_salary * productivity_loss_rate
-    
-    # 2. Overtime cost reduction - less overtime needed to cover vacant positions
-    overtime_multiplier = params.get('overtime_multiplier', 1.5)
-    overtime_hours_per_day = params.get('overtime_hours_per_day', 2)  # 2 hours OT per day to cover
-    overtime_savings = (
-        annual_positions * days_saved * overtime_hours_per_day * 
-        (daily_salary / 8) * (overtime_multiplier - 1)  # Extra cost above regular time
-    )
-    
-    # 3. Team productivity impact - faster filling reduces stress on existing team
-    team_impact_factor = params['team_impact_factor'] / 100
-    team_size = params.get('team_size', 6)
-    team_productivity_gain = (
-        annual_positions * days_saved * team_size * 
-        daily_salary * 0.8 * team_impact_factor  # 80% of avg salary for team members
-    )
-    
-    # 4. Faster time to productivity for new hires
-    faster_onboarding_value = annual_positions * (days_saved * 0.3) * daily_salary * 0.6  # 30% of saved time, 60% productivity
-    
-    total_annual_benefits = productivity_recovery + overtime_savings + team_productivity_gain + faster_onboarding_value
-    
-    # Investment costs
-    total_investment = (
-        params['optimization_investment'] + 
-        params.get('training_costs', 15000) + 
-        params.get('technology_costs', 25000)
-    )
-    
-    # Calculate ROI
-    roi = ((total_annual_benefits - total_investment) / total_investment * 100) if total_investment > 0 else 0
-    payback_months = (total_investment / (total_annual_benefits / 12)) if total_annual_benefits > 0 else 0
-    
-    return {
-        'total_investment': total_investment,
-        'annual_benefits': total_annual_benefits,
-        'roi': roi,
-        'payback_months': payback_months,
-        'days_saved_per_position': days_saved,
-        'total_days_saved_annually': annual_positions * days_saved,
-        'benefit_breakdown': {
-            'productivity_recovery': productivity_recovery,
-            'overtime_savings': overtime_savings,
-            'team_productivity_gain': team_productivity_gain,
-            'faster_onboarding': faster_onboarding_value
-        },
-        'investment_breakdown': {
-            'optimization_investment': params['optimization_investment'],
-            'training_costs': params.get('training_costs', 15000),
-            'technology_costs': params.get('technology_costs', 25000)
-        }
-    }    'time_to_fill_optimization': {
-        'name': "Time to Fill Optimization",
-        'description': "Reduce time to fill vacant positions through process improvements, technology, and recruiter training",
-        'annual_positions': 30,
-        'current_time_to_fill': 60,
-        'target_time_to_fill': 35,
-        'avg_position_salary': 85000,
-        'productivity_loss_rate': 0.7,  # 70% productivity loss during vacancy
-        'overtime_multiplier': 1.5,  # Overtime rate for covering work
-        'team_impact_factor': 0.15,  # 15% productivity hit on team
-        'optimization_investment': 45000,
-        'training_costs': 15000,
-        'technology_costs': 25000,
-        'typical_roi': "300-600%"
-    },import streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import json
@@ -152,8 +73,8 @@ INITIATIVE_TEMPLATES = {
         'productivity_gain': 18,
         'retention_improvement': 30,
         'team_performance_gain': 15,
-        'sick_leave_reduction': 20,  # NEW: typical reduction in sick days
-        'typical_roi': "500-1000%"  # Updated to reflect sick leave benefits
+        'sick_leave_reduction': 20,
+        'typical_roi': "500-1000%"
     },
     'executive_coaching': {
         'name': "Executive Coaching Initiative", 
@@ -168,8 +89,8 @@ INITIATIVE_TEMPLATES = {
         'productivity_gain': 25,
         'retention_improvement': 40,
         'team_performance_gain': 20,
-        'sick_leave_reduction': 25,  # NEW: executives often have high stress/burnout
-        'typical_roi': "600-1200%"  # Updated to reflect sick leave benefits
+        'sick_leave_reduction': 25,
+        'typical_roi': "600-1200%"
     },
     'recruiting_optimization': {
         'name': "Recruiting Process Optimization",
@@ -190,9 +111,9 @@ INITIATIVE_TEMPLATES = {
         'current_time_to_fill': 60,
         'target_time_to_fill': 35,
         'avg_position_salary': 85000,
-        'productivity_loss_rate': 70,  # 70% productivity loss during vacancy
-        'overtime_multiplier': 1.5,  # Overtime rate for covering work
-        'team_impact_factor': 15,  # 15% productivity hit on team
+        'productivity_loss_rate': 70,
+        'overtime_multiplier': 1.5,
+        'team_impact_factor': 15,
         'optimization_investment': 45000,
         'training_costs': 15000,
         'technology_costs': 25000,
@@ -279,10 +200,9 @@ def calculate_leadership_roi(params):
     )
     
     # NEW: Sick leave reduction benefit
-    # Typical company: 7-10 sick days per year, cost = daily salary + replacement costs
     current_sick_days = params.get('current_sick_days', 8)
     sick_leave_reduction_pct = params.get('sick_leave_reduction', 20) / 100
-    daily_salary = params['avg_salary'] / 250  # ~250 working days per year
+    daily_salary = params['avg_salary'] / 250
     
     # Both direct (participants) and indirect (team members) benefit from better leadership
     total_affected_employees = params['participants'] + (params['participants'] * team_size)
@@ -290,7 +210,7 @@ def calculate_leadership_roi(params):
         total_affected_employees * 
         current_sick_days * 
         sick_leave_reduction_pct * 
-        daily_salary * 1.3  # Include replacement/coverage costs
+        daily_salary * 1.3
     )
     
     total_annual_benefits = productivity_benefit + retention_savings + team_benefit + sick_leave_savings
@@ -364,31 +284,31 @@ def calculate_time_to_fill_roi(params):
     days_saved = current_days - target_days
     
     avg_salary = params['avg_position_salary']
-    daily_salary = avg_salary / 250  # ~250 working days per year
+    daily_salary = avg_salary / 250
     
     # Benefits calculation
-    # 1. Productivity recovery - get productive employees faster
+    # 1. Productivity recovery
     productivity_loss_rate = params['productivity_loss_rate'] / 100
     productivity_recovery = annual_positions * days_saved * daily_salary * productivity_loss_rate
     
-    # 2. Overtime cost reduction - less overtime needed to cover vacant positions
+    # 2. Overtime cost reduction
     overtime_multiplier = params.get('overtime_multiplier', 1.5)
-    overtime_hours_per_day = params.get('overtime_hours_per_day', 2)  # 2 hours OT per day to cover
+    overtime_hours_per_day = params.get('overtime_hours_per_day', 2)
     overtime_savings = (
         annual_positions * days_saved * overtime_hours_per_day * 
-        (daily_salary / 8) * (overtime_multiplier - 1)  # Extra cost above regular time
+        (daily_salary / 8) * (overtime_multiplier - 1)
     )
     
-    # 3. Team productivity impact - faster filling reduces stress on existing team
+    # 3. Team productivity impact
     team_impact_factor = params['team_impact_factor'] / 100
     team_size = params.get('team_size', 6)
     team_productivity_gain = (
         annual_positions * days_saved * team_size * 
-        daily_salary * 0.8 * team_impact_factor  # 80% of avg salary for team members
+        daily_salary * 0.8 * team_impact_factor
     )
     
-    # 4. Faster time to productivity for new hires
-    faster_onboarding_value = annual_positions * (days_saved * 0.3) * daily_salary * 0.6  # 30% of saved time, 60% productivity
+    # 4. Faster time to productivity
+    faster_onboarding_value = annual_positions * (days_saved * 0.3) * daily_salary * 0.6
     
     total_annual_benefits = productivity_recovery + overtime_savings + team_productivity_gain + faster_onboarding_value
     
@@ -486,7 +406,7 @@ def calculate_development_roi(params):
     
     # Benefits
     performance_gains = participants * params.get('avg_salary', 95000) * 0.12
-    internal_hiring_savings = participants * mobility_improvement * 25000  # vs external hiring
+    internal_hiring_savings = participants * mobility_improvement * 25000
     retention_boost = participants * 0.2 * params.get('avg_salary', 95000) * 1.5
     
     total_annual_benefits = performance_gains + internal_hiring_savings + retention_boost
@@ -703,7 +623,7 @@ def create_powerpoint_presentation(initiative_results, overall_roi, total_invest
     prs = Presentation()
     
     # Slide 1: Title Slide
-    slide_layout = prs.slide_layouts[0]  # Title slide layout
+    slide_layout = prs.slide_layouts[0]
     slide = prs.slides.add_slide(slide_layout)
     title = slide.shapes.title
     subtitle = slide.placeholders[1]
@@ -712,7 +632,7 @@ def create_powerpoint_presentation(initiative_results, overall_roi, total_invest
     subtitle.text = f"Portfolio Analysis (Incremental Cost Method)\nGenerated: {datetime.now().strftime('%B %d, %Y')}"
     
     # Slide 2: Executive Summary
-    slide_layout = prs.slide_layouts[1]  # Title and content layout
+    slide_layout = prs.slide_layouts[1]
     slide = prs.slides.add_slide(slide_layout)
     title = slide.shapes.title
     content = slide.placeholders[1]
@@ -1555,7 +1475,20 @@ PARAMETERS USED
                 key=f"download_json_{initiative_key}"
             )
     
-    st.info(f"💡 **Expected ROI Range:** {template['typical_roi']}")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"💡 **Expected ROI Range:** {template['typical_roi']}")
+        
+    with col2:
+        # Special note for time to fill calculator
+        if initiative_key == 'time_to_fill_optimization':
+            st.info("""
+            **💡 Time to Fill Benefits Include:**
+            • Productivity recovery (faster placement)
+            • Overtime cost reduction  
+            • Team productivity improvement
+            • Faster new hire value realization
+            """)
 
 def display_overall_summary():
     """Display summary across all selected initiatives"""
