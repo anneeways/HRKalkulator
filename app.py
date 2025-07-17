@@ -1554,9 +1554,10 @@ def display_initiative(initiative_key):
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
+            daily_revenue_at_risk = results.get('daily_revenue_at_risk', 0)
             st.metric(
                 "Daily Revenue at Risk",
-                format_currency(results['daily_revenue_at_risk']),
+                format_currency(daily_revenue_at_risk),
                 help="Revenue at risk per day with current time to fill"
             )
         
@@ -1568,9 +1569,10 @@ def display_initiative(initiative_key):
             )
         
         with col3:
+            total_revenue_protection = results.get('total_revenue_protection', 0)
             st.metric(
                 "Annual Revenue Protection",
-                format_currency(results['total_revenue_protection']),
+                format_currency(total_revenue_protection),
                 help="Revenue protected by faster time to fill"
             )
         
@@ -1590,53 +1592,60 @@ def display_initiative(initiative_key):
         
         with col1:
             st.markdown("**💸 Cost Savings Breakdown**")
+            cost_breakdown = results.get('cost_savings_breakdown', {})
             cost_breakdown_df = pd.DataFrame([
-                {"Category": "Productivity Recovery", "Annual Value": results['cost_savings_breakdown']['productivity_recovery']},
-                {"Category": "Overtime Reduction", "Annual Value": results['cost_savings_breakdown']['overtime_savings']},
-                {"Category": "Team Productivity", "Annual Value": results['cost_savings_breakdown']['team_productivity_gain']},
-                {"Category": "Faster Onboarding", "Annual Value": results['cost_savings_breakdown']['faster_onboarding']},
+                {"Category": "Productivity Recovery", "Annual Value": cost_breakdown.get('productivity_recovery', 0)},
+                {"Category": "Overtime Reduction", "Annual Value": cost_breakdown.get('overtime_savings', 0)},
+                {"Category": "Team Productivity", "Annual Value": cost_breakdown.get('team_productivity_gain', 0)},
+                {"Category": "Faster Onboarding", "Annual Value": cost_breakdown.get('faster_onboarding', 0)},
             ])
             cost_breakdown_df['Annual Value'] = cost_breakdown_df['Annual Value'].apply(format_currency)
             st.dataframe(cost_breakdown_df, hide_index=True, use_container_width=True)
             
-            st.metric("Total Cost Savings", format_currency(results['total_cost_savings']))
+            st.metric("Total Cost Savings", format_currency(results.get('total_cost_savings', 0)))
         
         with col2:
             st.markdown("**💵 Revenue Protection Breakdown**")
+            revenue_breakdown = results.get('revenue_impact_breakdown', {})
             revenue_breakdown_df = pd.DataFrame([
-                {"Category": "Direct Revenue Protection", "Annual Value": results['revenue_impact_breakdown']['direct_revenue_protection']},
-                {"Category": "Customer Service Impact", "Annual Value": results['revenue_impact_breakdown']['customer_impact_protection']},
-                {"Category": "Opportunity Cost Protection", "Annual Value": results['revenue_impact_breakdown']['opportunity_cost_protection']},
-                {"Category": "Market Share Protection", "Annual Value": results['revenue_impact_breakdown']['market_share_protection']},
+                {"Category": "Direct Revenue Protection", "Annual Value": revenue_breakdown.get('direct_revenue_protection', 0)},
+                {"Category": "Customer Service Impact", "Annual Value": revenue_breakdown.get('customer_impact_protection', 0)},
+                {"Category": "Opportunity Cost Protection", "Annual Value": revenue_breakdown.get('opportunity_cost_protection', 0)},
+                {"Category": "Market Share Protection", "Annual Value": revenue_breakdown.get('market_share_protection', 0)},
             ])
             revenue_breakdown_df['Annual Value'] = revenue_breakdown_df['Annual Value'].apply(format_currency)
             st.dataframe(revenue_breakdown_df, hide_index=True, use_container_width=True)
             
-            st.metric("Total Revenue Protection", format_currency(results['total_revenue_protection']))
+            st.metric("Total Revenue Protection", format_currency(results.get('total_revenue_protection', 0)))
         
         # Combined chart
         st.subheader("📈 Combined Benefits Analysis")
         
-        # Create combined breakdown for chart
-        combined_benefits = {
-            **{f"Cost: {k}": v for k, v in results['cost_savings_breakdown'].items()},
-            **{f"Revenue: {k}": v for k, v in results['revenue_impact_breakdown'].items()}
-        }
+        # Create combined breakdown for chart with safe access
+        cost_savings = results.get('cost_savings_breakdown', {})
+        revenue_impact = results.get('revenue_impact_breakdown', {})
         
-        fig = px.bar(
-            x=list(combined_benefits.keys()),
-            y=list(combined_benefits.values()),
-            title="Time to Fill Optimization - Cost Savings vs Revenue Protection",
-            color=['Cost Savings'] * 4 + ['Revenue Protection'] * 4,
-            color_discrete_map={'Cost Savings': '#1f77b4', 'Revenue Protection': '#2ca02c'}
-        )
-        fig.update_layout(
-            xaxis_title="Benefit Category",
-            yaxis_title="Annual Value ($)",
-            xaxis_tickangle=-45,
-            showlegend=True
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        combined_benefits = {}
+        for k, v in cost_savings.items():
+            combined_benefits[f"Cost: {k}"] = v
+        for k, v in revenue_impact.items():
+            combined_benefits[f"Revenue: {k}"] = v
+        
+        if combined_benefits:  # Only create chart if we have data
+            fig = px.bar(
+                x=list(combined_benefits.keys()),
+                y=list(combined_benefits.values()),
+                title="Time to Fill Optimization - Cost Savings vs Revenue Protection",
+                color=['Cost Savings'] * len(cost_savings) + ['Revenue Protection'] * len(revenue_impact),
+                color_discrete_map={'Cost Savings': '#1f77b4', 'Revenue Protection': '#2ca02c'}
+            )
+            fig.update_layout(
+                xaxis_title="Benefit Category",
+                yaxis_title="Annual Value ($)",
+                xaxis_tickangle=-45,
+                showlegend=True
+            )
+            st.plotly_chart(fig, use_container_width=True)
     if initiative_key in ['leadership_development', 'executive_coaching'] and 'cost_breakdown' in results:
         col1, col2 = st.columns(2)
         
@@ -1724,33 +1733,34 @@ def display_initiative(initiative_key):
         
         with col1:
             st.subheader("💰 Solution Investments")
-            investment_breakdown = results['investment_breakdown']
+            investment_breakdown = results.get('investment_breakdown', {})
             investment_df = pd.DataFrame([
-                {"Investment Type": "Technology & Tools", "Amount": investment_breakdown['technology_investment']},
-                {"Investment Type": "Process Improvement", "Amount": investment_breakdown['process_improvement']},
-                {"Investment Type": "Training & Development", "Amount": investment_breakdown['training_investment']},
+                {"Investment Type": "Technology & Tools", "Amount": investment_breakdown.get('technology_investment', 0)},
+                {"Investment Type": "Process Improvement", "Amount": investment_breakdown.get('process_improvement', 0)},
+                {"Investment Type": "Training & Development", "Amount": investment_breakdown.get('training_investment', 0)},
             ])
             st.dataframe(investment_df, hide_index=True, use_container_width=True)
             
             # Investment pie chart
-            fig_investment = px.pie(
-                values=list(investment_breakdown.values()),
-                names=["Technology", "Process", "Training"],
-                title="Investment Allocation"
-            )
-            st.plotly_chart(fig_investment, use_container_width=True)
+            if investment_breakdown:
+                fig_investment = px.pie(
+                    values=list(investment_breakdown.values()),
+                    names=["Technology", "Process", "Training"],
+                    title="Investment Allocation"
+                )
+                st.plotly_chart(fig_investment, use_container_width=True)
             
         with col2:
             st.subheader("📈 Solution Benefits")
-            benefits_breakdown = results['solution_benefits_breakdown']
+            benefits_breakdown = results.get('solution_benefits_breakdown', {})
             benefits_df = pd.DataFrame([
-                {"Benefit Category": "Technology Efficiency", "Annual Value": benefits_breakdown['technology_efficiency']},
-                {"Benefit Category": "Process Cost Savings", "Annual Value": benefits_breakdown['process_cost_savings']},
-                {"Benefit Category": "Agency Cost Reduction", "Annual Value": benefits_breakdown['agency_cost_reduction']},
-                {"Benefit Category": "Hire Quality Value", "Annual Value": benefits_breakdown['hire_quality_value']},
-                {"Benefit Category": "Candidate Experience", "Annual Value": benefits_breakdown['candidate_experience_value']},
-                {"Benefit Category": "Manager Efficiency", "Annual Value": benefits_breakdown['hiring_manager_efficiency']},
-                {"Benefit Category": "Competitive Advantage", "Annual Value": benefits_breakdown['competitive_advantage']},
+                {"Benefit Category": "Technology Efficiency", "Annual Value": benefits_breakdown.get('technology_efficiency', 0)},
+                {"Benefit Category": "Process Cost Savings", "Annual Value": benefits_breakdown.get('process_cost_savings', 0)},
+                {"Benefit Category": "Agency Cost Reduction", "Annual Value": benefits_breakdown.get('agency_cost_reduction', 0)},
+                {"Benefit Category": "Hire Quality Value", "Annual Value": benefits_breakdown.get('hire_quality_value', 0)},
+                {"Benefit Category": "Candidate Experience", "Annual Value": benefits_breakdown.get('candidate_experience_value', 0)},
+                {"Benefit Category": "Manager Efficiency", "Annual Value": benefits_breakdown.get('hiring_manager_efficiency', 0)},
+                {"Benefit Category": "Competitive Advantage", "Annual Value": benefits_breakdown.get('competitive_advantage', 0)},
             ])
             benefits_df['Annual Value'] = benefits_df['Annual Value'].apply(format_currency)
             st.dataframe(benefits_df, hide_index=True, use_container_width=True)
@@ -1758,26 +1768,28 @@ def display_initiative(initiative_key):
         # Combined solution benefits chart
         st.subheader("📊 Recruiting Solution Benefits Breakdown")
         
-        fig = px.bar(
-            x=list(benefits_breakdown.keys()),
-            y=list(benefits_breakdown.values()),
-            title="Annual Benefits by Solution Category",
-            color=list(benefits_breakdown.values()),
-            color_continuous_scale="Blues"
-        )
-        fig.update_layout(
-            xaxis_title="Benefit Category",
-            yaxis_title="Annual Value ($)",
-            showlegend=False,
-            xaxis_tickangle=-45
-        )
-        # Rename x-axis labels for better readability
-        fig.update_xaxes(
-            ticktext=["Technology Efficiency", "Process Savings", "Agency Reduction", 
-                     "Quality Value", "Candidate Experience", "Manager Efficiency", "Competitive Edge"],
-            tickvals=list(range(len(benefits_breakdown)))
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        benefits_breakdown = results.get('solution_benefits_breakdown', {})
+        if benefits_breakdown:  # Only create chart if we have data
+            fig = px.bar(
+                x=list(benefits_breakdown.keys()),
+                y=list(benefits_breakdown.values()),
+                title="Annual Benefits by Solution Category",
+                color=list(benefits_breakdown.values()),
+                color_continuous_scale="Blues"
+            )
+            fig.update_layout(
+                xaxis_title="Benefit Category",
+                yaxis_title="Annual Value ($)",
+                showlegend=False,
+                xaxis_tickangle=-45
+            )
+            # Rename x-axis labels for better readability
+            fig.update_xaxes(
+                ticktext=["Technology Efficiency", "Process Savings", "Agency Reduction", 
+                         "Quality Value", "Candidate Experience", "Manager Efficiency", "Competitive Edge"],
+                tickvals=list(range(len(benefits_breakdown)))
+            )
+            st.plotly_chart(fig, use_container_width=True)
         col1, col2 = st.columns(2)
         
         with col1:
